@@ -1,0 +1,8 @@
+{
+  "values": {
+    "image": "sample/photo.png",
+    "width": "200",
+    "format": "png",
+    "output_dir": "{temp}"
+  }
+}

@@ -70,7 +70,11 @@ if (existsSync(archivePath)) {
 // named "python", which lands at resources/python.
 console.log('Unpacking...')
 rmSync(pythonDir, { recursive: true, force: true })
-run('tar', ['-xzf', archivePath, '-C', resourcesDir])
+// On Windows, use the system's own tar: other tars that may come first on the
+// PATH (such as Git's) misread paths that start with a drive letter like C:.
+const tar =
+  process.platform === 'win32' ? join(process.env.SystemRoot, 'System32', 'tar.exe') : 'tar'
+run(tar, ['-xzf', archivePath, '-C', resourcesDir])
 
 const python = join(pythonDir, process.platform === 'win32' ? 'python.exe' : 'bin/python3')
 

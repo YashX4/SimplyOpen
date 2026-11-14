@@ -4,7 +4,8 @@
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import Ajv from 'ajv'
@@ -18,6 +19,7 @@ import {
   unsupportedReason,
   type AppDescription,
   type Manifest,
+  type Value,
   type Values,
 } from '../shared/manifest'
 
@@ -43,6 +45,10 @@ const pythonPath =
 // The schema belongs to the Analyzer, so don't fail on keywords Ajv's strict
 // mode doesn't know.
 const validateManifest = new Ajv({ strict: false }).compile(manifestSchema)
+
+// The folder the script expects to be started from.
+const workingDirFor = (m: Manifest): string =>
+  join(projectDir, primaryEntryPoint(m)?.working_directory ?? '')
 
 let manifest: Manifest | null = null
 let lastResultsDir: string | null = null
@@ -84,8 +90,7 @@ function runProject(values: Values, sendLog: (line: string) => void): Promise<Ru
   if (problem) return Promise.resolve({ ok: false, error: problem })
 
   const command = buildCommand(manifest, values)
-  // The folder the script expects to be started from.
-  const workingDir = join(projectDir, primaryEntryPoint(manifest)?.working_directory ?? '')
+  const workingDir = workingDirFor(manifest)
   const results = resultsFolder(manifest, values)
 
   running = true
@@ -135,6 +140,60 @@ function runProject(values: Values, sendLog: (line: string) => void): Promise<Ru
   })
 }
 
+/**
+ * The hidden test mode, used by the Factory to check a finished app. Started
+ * with `--smoke-test`, the app opens no window. It runs the project once with
+ * the known-good answers in simplyopen.sample.json, exactly as a real run
+ * would, then reports whether that worked.
+ */
+async function smokeTest(): Promise<boolean> {
+  const fail = (reason: string): false => {
+    console.log(`SMOKE TEST FAILED: ${reason}`)
+    return false
+  }
+
+  const loaded = loadApp()
+  if (!loaded.ok) return fail(loaded.error)
+  const tested = loaded.app.manifest
+
+  let sample: Record<string, Value>
+  try {
+    sample = JSON.parse(readFileSync(join(projectDir, 'simplyopen.sample.json'), 'utf8')).values
+  } catch {
+    return fail('This project has no sample inputs (simplyopen.sample.json).')
+  }
+
+  // Sample files are named relative to the project folder. "{temp}" asks for a
+  // fresh empty folder, for inputs that say where to save results.
+  const toPath = (path: string): string =>
+    path === '{temp}' ? mkdtempSync(join(tmpdir(), 'simplyopen-test-')) : resolve(projectDir, path)
+  const values: Values = {}
+  for (const input of tested.inputs) {
+    const value = sample[input.id]
+    if (value === undefined) continue
+    if (input.kind === 'file' || input.kind === 'folder') {
+      values[input.id] = Array.isArray(value) ? value.map(toPath) : toPath(String(value))
+    } else {
+      values[input.id] = value
+    }
+  }
+
+  const result = await runProject(values, (line) => console.log(line))
+  if (!result.ok) return fail(result.error)
+
+  // If the project is meant to write files, make sure some actually appeared.
+  const folder = resultsFolder(tested, values)
+  if (folder !== null) {
+    const full = resolve(workingDirFor(tested), folder)
+    if (!existsSync(full) || readdirSync(full).length === 0) {
+      return fail(`The run finished but nothing appeared in ${full}`)
+    }
+  }
+
+  console.log('SMOKE TEST PASSED')
+  return true
+}
+
 function createWindow(): void {
   const window = new BrowserWindow({
     width: 560,
@@ -152,6 +211,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (process.argv.includes('--smoke-test')) {
+    smokeTest().then((passed) => app.exit(passed ? 0 : 1))
+    return
+  }
+
   ipcMain.handle('app:load', () => loadApp())
 
   ipcMain.handle('files:choose', async (_event, options: ChooseFilesOptions = {}) => {
