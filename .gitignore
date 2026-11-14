@@ -2,3 +2,5 @@ notes/
 node_modules/
 out/
 __pycache__/
+runner/resources/
+dist/

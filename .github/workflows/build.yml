@@ -1,0 +1,77 @@
+# The Factory: builds one project's app for Mac and Windows, tests each, and
+# offers the results as downloads.
+#
+# Start it by hand from the repository's Actions tab ("Run workflow"), or let
+# it run by itself when the Runner or the example projects change.
+
+name: Build apps
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Folder of the project to build, relative to the repository
+        default: examples/image_resizer
+  push:
+    paths:
+      - runner/**
+      - examples/**
+      - analyzer/src/manifest/**
+      - .github/workflows/build.yml
+
+jobs:
+  build:
+    name: Build for ${{ matrix.system }}
+    strategy:
+      # If one system fails, still finish the other, so we see both results.
+      fail-fast: false
+      matrix:
+        include:
+          - system: Mac
+            os: macos-latest
+          - system: Windows
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: runner
+        # Use the same shell on both systems so the commands below are identical.
+        shell: bash
+
+    env:
+      PROJECT: ${{ inputs.project || 'examples/image_resizer' }}
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v7
+
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: runner/package-lock.json
+
+      - name: Install the Runner's tools
+        run: npm ci
+
+      - name: Check the Runner's own logic
+        run: npm test
+
+      - name: Gather a private Python and the project
+        run: npm run stage -- "../$PROJECT"
+
+      - name: Build the app
+        run: npm run package
+
+      - name: Test the built app with the project's sample inputs
+        run: npm run smoke
+
+      # Only reached if the test above passed.
+      - name: Offer the app as a download
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-${{ matrix.system }}
+          path: runner/dist/*.zip
+          if-no-files-found: error
