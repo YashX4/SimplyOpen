@@ -1,0 +1,193 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://simplyopen.dev/schemas/manifest-1.0.json",
+  "title": "SimplyOpen Manifest (app_or_tool)",
+  "description": "SHARED CONTRACT between the Analyzer, Runner, Factory and Web. Runtime equivalent of src/manifest/schema.ts; change both together, and only after coordinating with all three consumers. SCOPE: only project_kind \"app_or_tool\" (a standalone script or small program run on the person's own computer) - not web pages, Claude artifacts, prompts/skills, or static files/templates. Rules that JSON Schema does not express here are listed in schema.ts and checked in code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project_kind", "project", "inputs", "outputs", "dependencies", "capabilities", "confidence"],
+  "properties": {
+    "schema_version": {
+      "description": "Version of the contract. Currently \"1.0\".",
+      "type": "string",
+      "const": "1.0"
+    },
+    "project_kind": {
+      "description": "Only \"app_or_tool\" for now; other kinds will get their own values.",
+      "type": "string",
+      "const": "app_or_tool"
+    },
+    "project": { "$ref": "#/definitions/project" },
+    "inputs": { "type": "array", "items": { "$ref": "#/definitions/input" } },
+    "outputs": { "type": "array", "items": { "$ref": "#/definitions/output" } },
+    "dependencies": { "$ref": "#/definitions/dependencies" },
+    "capabilities": { "$ref": "#/definitions/capabilities" },
+    "confidence": { "$ref": "#/definitions/confidence" }
+  },
+  "definitions": {
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["language", "language_version", "entry_points", "primary_entry_point", "build_command", "assets"],
+      "properties": {
+        "language": {
+          "description": "Free string, deliberately not an enum (e.g. \"python\", \"node\", \"go\"). Consumers treat unrecognised values as unknown and fall back to generic handling.",
+          "type": "string"
+        },
+        "language_version": { "description": "e.g. \"3.11\"; null if unknown.", "type": ["string", "null"] },
+        "entry_points": {
+          "description": "Every runnable file; at least one.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/entry_point" }
+        },
+        "primary_entry_point": {
+          "description": "id of the entry point to run by default; must match one of entry_points (checked in code).",
+          "type": "string"
+        },
+        "build_command": { "description": "Run once before any entry point, e.g. \"cargo build --release\"; null if none.", "type": ["string", "null"] },
+        "assets": { "description": "Non-code files loaded at runtime, as paths or globs relative to the archive root.", "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "entry_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "working_directory", "run_command", "description", "interface"],
+      "properties": {
+        "id": { "description": "Unique within entry_points (checked in code).", "type": "string" },
+        "path": { "description": "File or executable to run, relative to the archive root.", "type": "string" },
+        "working_directory": { "description": "Folder to run from, relative to the archive root; \"\" for the root. run_command file names are relative to it.", "type": "string" },
+        "run_command": {
+          "description": "Run from working_directory, e.g. \"python main.py {args}\"; {args} and (for local servers) {port} are the only placeholders; null if unknown.",
+          "type": ["string", "null"]
+        },
+        "description": { "description": "Plain English, e.g. \"Converts transcripts to NVivo format\".", "type": "string" },
+        "interface": { "$ref": "#/definitions/interface" }
+      }
+    },
+    "interface": {
+      "description": "How the person interacts with the program once started.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "exits_on_its_own", "controls", "prompts", "server"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["command_line", "own_window", "interactive_terminal", "local_server"] },
+        "exits_on_its_own": { "description": "false for games, windowed apps and servers that run until closed.", "type": "boolean" },
+        "controls": { "type": "array", "items": { "$ref": "#/definitions/control" } },
+        "prompts": { "type": "array", "items": { "$ref": "#/definitions/terminal_prompt" } },
+        "server": {
+          "description": "Only for kind \"local_server\"; null otherwise.",
+          "anyOf": [{ "$ref": "#/definitions/server" }, { "type": "null" }]
+        }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "keys"],
+      "properties": {
+        "action": { "description": "Plain English, e.g. \"Jump\".", "type": "string" },
+        "keys": { "description": "Plain English, e.g. [\"Space\"].", "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "terminal_prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question", "kind", "choices"],
+      "properties": {
+        "question": { "type": "string" },
+        "kind": { "type": "string", "enum": ["text", "number", "choice", "yes_no"] },
+        "choices": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["port", "port_binding", "url_path", "ready_text"],
+      "properties": {
+        "port": { "type": ["integer", "null"] },
+        "port_binding": { "description": "e.g. \"--port {value}\"; rendered in place of {port}.", "type": ["string", "null"] },
+        "url_path": { "description": "e.g. \"/\".", "type": "string" },
+        "ready_text": { "description": "Printed once the server is ready; null if unknown.", "type": ["string", "null"] }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "help", "required", "multiple", "min", "max", "secret", "cli_binding", "env_binding"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["file", "folder", "text", "number", "choice", "boolean"] },
+        "label": { "type": "string" },
+        "help": { "description": "Plain-English hint; null if none.", "type": ["string", "null"] },
+        "required": { "type": "boolean" },
+        "accepts": { "description": "File extensions.", "type": "array", "items": { "type": "string" } },
+        "multiple": { "description": "Several files at once; only true for kind \"file\".", "type": "boolean" },
+        "choices": { "description": "Only for kind \"choice\".", "type": "array", "items": { "type": "string" } },
+        "min": { "description": "Only for kind \"number\"; null otherwise.", "type": ["number", "null"] },
+        "max": { "description": "Only for kind \"number\"; null otherwise.", "type": ["number", "null"] },
+        "secret": { "description": "Mask the value and never log it (passwords, API keys).", "type": "boolean" },
+        "cli_binding": {
+          "description": "e.g. \"--input {value}\". One of the only three invocation-mechanics fields.",
+          "type": ["string", "null"]
+        },
+        "env_binding": {
+          "description": "Environment variable that carries the value, e.g. \"OPENAI_API_KEY\". One of the only three invocation-mechanics fields.",
+          "type": ["string", "null"]
+        },
+        "default": { "description": "Any JSON value (unknown in schema.ts)." }
+      },
+      "if": { "properties": { "kind": { "const": "choice" } }, "required": ["kind"] },
+      "then": { "properties": { "choices": true }, "required": ["choices"] },
+      "else": { "not": { "properties": { "choices": true }, "required": ["choices"] } }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "path_pattern"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["file", "folder", "console"] },
+        "label": { "type": "string" },
+        "path_pattern": { "description": "e.g. \"output/*.docx\"; null for \"console\".", "type": ["string", "null"] }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "packages", "system", "operating_systems"],
+      "properties": {
+        "runtime": { "description": "e.g. [\"python>=3.10\"] or [\"node>=20\"].", "type": "array", "items": { "type": "string" } },
+        "packages": { "description": "In the language's own syntax, e.g. [\"pandas==2.1.0\"].", "type": "array", "items": { "type": "string" } },
+        "system": { "description": "Programs or libraries outside the package manager, e.g. [\"ffmpeg\"].", "type": "array", "items": { "type": "string" } },
+        "operating_systems": {
+          "description": "Where it can run; all three unless tied to one.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["macos", "windows", "linux"] }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network_access", "filesystem_access", "reads_env_vars", "runs_other_programs"],
+      "properties": {
+        "network_access": { "type": "boolean" },
+        "filesystem_access": { "type": "string", "enum": ["none", "declared_inputs_outputs_only", "broad"] },
+        "reads_env_vars": { "type": "array", "items": { "type": "string" } },
+        "runs_other_programs": { "type": "boolean" }
+      }
+    },
+    "confidence": {
+      "description": "Used by the Runner to fall back to a generic window when not \"high\".",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overall", "notes"],
+      "properties": {
+        "overall": { "type": "string", "enum": ["high", "medium", "low"] },
+        "notes": { "description": "Plain-English flags.", "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

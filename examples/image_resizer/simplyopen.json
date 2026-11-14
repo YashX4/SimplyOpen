@@ -1,43 +1,113 @@
 {
-  "manifest_version": 0,
   "name": "Image Resizer",
-  "description": "Make a picture smaller or larger without stretching it. Specifically for the image re-sizer, each project gets its own.",
-  "entry": "resize.py",
-  "requirements": "requirements.txt",
-  "action_label": "Resize picture",
-  "inputs": [
-    {
-      "id": "image",
-      "label": "Picture to resize",
-      "type": "file",
-      "flag": null,
-      "required": true,
-      "extensions": ["png", "jpg", "jpeg", "webp"]
+  "description": "Make a picture smaller or larger without stretching it.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "resize",
+          "path": "resize.py",
+          "working_directory": "",
+          "run_command": "python resize.py {args}",
+          "description": "Resizes one picture to a new width.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "resize",
+      "build_command": null,
+      "assets": []
     },
-    {
-      "id": "width",
-      "label": "New width (pixels)",
-      "type": "number",
-      "flag": "--width",
-      "default": "800"
+    "inputs": [
+      {
+        "id": "image",
+        "kind": "file",
+        "label": "Picture to resize",
+        "help": null,
+        "required": true,
+        "accepts": [".png", ".jpg", ".jpeg", ".webp"],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "width",
+        "kind": "number",
+        "label": "New width (pixels)",
+        "help": "The height is worked out for you.",
+        "required": false,
+        "multiple": false,
+        "min": 1,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--width {value}",
+        "env_binding": null,
+        "default": 800
+      },
+      {
+        "id": "format",
+        "kind": "choice",
+        "label": "Save as type",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "choices": ["png", "jpeg", "webp"],
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--format {value}",
+        "env_binding": null,
+        "default": "png"
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "resized",
+        "kind": "file",
+        "label": "Resized picture",
+        "path_pattern": "{output_dir}/*_resized.*"
+      }
+    ],
+    "dependencies": {
+      "runtime": ["python>=3.9"],
+      "packages": ["Pillow"],
+      "system": [],
+      "operating_systems": ["macos", "windows", "linux"]
     },
-    {
-      "id": "format",
-      "label": "Save as type",
-      "type": "choice",
-      "flag": "--format",
-      "default": "png",
-      "options": [
-        {"value": "png", "label": "PNG (best quality)"},
-        {"value": "jpeg", "label": "JPEG (smaller file)"},
-        {"value": "webp", "label": "WebP (for websites)"}
-      ]
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
     }
-  ],
-  "results": {"flag": "--output-dir"},
-  "sample": {
-    "image": "sample/photo.png",
-    "width": "200",
-    "format": "png"
   }
 }

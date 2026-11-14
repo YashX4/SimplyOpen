@@ -4,13 +4,22 @@
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { spawn } from 'node:child_process'
-import { mkdirSync, readFileSync, rmdirSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import Ajv from 'ajv'
-import manifestSchema from '../../../manifest/manifest.schema.json'
-import type { ManifestResult, RunResult } from '../shared/api'
-import { buildArgs, checkValues, type Manifest, type Values } from '../shared/manifest'
+import manifestSchema from '../../../analyzer/src/manifest/schema.json'
+import type { ChooseFilesOptions, LoadResult, RunResult } from '../shared/api'
+import {
+  buildCommand,
+  checkValues,
+  primaryEntryPoint,
+  resultsFolder,
+  unsupportedReason,
+  type AppDescription,
+  type Manifest,
+  type Values,
+} from '../shared/manifest'
 
 const isWindows = process.platform === 'win32'
 
@@ -31,41 +40,39 @@ const pythonPath =
       ? 'python'
       : 'python3')
 
-const validateManifest = new Ajv().compile(manifestSchema)
+// The schema belongs to the Analyzer, so don't fail on keywords Ajv's strict
+// mode doesn't know.
+const validateManifest = new Ajv({ strict: false }).compile(manifestSchema)
 
 let manifest: Manifest | null = null
 let lastResultsDir: string | null = null
 let running = false
 
-function loadManifest(): ManifestResult {
-  let parsed: unknown
+/** Reads simplyopen.json: the Analyzer's result for this project (manifest, name, description). */
+function loadApp(): LoadResult {
+  let parsed: Partial<AppDescription>
   try {
     parsed = JSON.parse(readFileSync(join(projectDir, 'simplyopen.json'), 'utf8'))
   } catch (error) {
     return { ok: false, error: `Could not read this app's description file. (${String(error)})` }
   }
-  if (!validateManifest(parsed)) {
+  if (typeof parsed?.name !== 'string' || typeof parsed.description !== 'string') {
+    return { ok: false, error: "This app's description file is missing its name or description." }
+  }
+  if (!validateManifest(parsed.manifest)) {
     const problem = validateManifest.errors?.[0]
     return {
       ok: false,
       error: `This app's description file is not valid: ${problem?.instancePath ?? ''} ${problem?.message ?? ''}`,
     }
   }
-  manifest = parsed as unknown as Manifest
-  return { ok: true, manifest }
-}
+  // Valid, but is it a kind of project the Runner can run yet?
+  const loaded = parsed.manifest as Manifest
+  const unsupported = unsupportedReason(loaded)
+  if (unsupported) return { ok: false, error: unsupported }
 
-/** Makes a fresh folder for one run, e.g. Documents/SimplyOpen/Image Resizer/2026-11-14 10.32.05 */
-function createResultsDir(appName: string): string {
-  const now = new Date()
-  const pad = (n: number): string => String(n).padStart(2, '0')
-  const stamp =
-    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
-    `${pad(now.getHours())}.${pad(now.getMinutes())}.${pad(now.getSeconds())}`
-  const safeName = appName.replace(/[\\/:*?"<>|]/g, '_')
-  const dir = join(app.getPath('documents'), 'SimplyOpen', safeName, stamp)
-  mkdirSync(dir, { recursive: true })
-  return dir
+  manifest = loaded
+  return { ok: true, app: { manifest: loaded, name: parsed.name, description: parsed.description } }
 }
 
 function runProject(values: Values, sendLog: (line: string) => void): Promise<RunResult> {
@@ -76,27 +83,24 @@ function runProject(values: Values, sendLog: (line: string) => void): Promise<Ru
   const problem = checkValues(manifest, values)
   if (problem) return Promise.resolve({ ok: false, error: problem })
 
-  const resultsDir = createResultsDir(manifest.name)
-  const args = [manifest.entry, ...buildArgs(manifest, values, resultsDir)]
+  const command = buildCommand(manifest, values)
+  // The folder the script expects to be started from.
+  const workingDir = join(projectDir, primaryEntryPoint(manifest)?.working_directory ?? '')
+  const results = resultsFolder(manifest, values)
 
   running = true
   return new Promise((done) => {
     const finish = (result: RunResult): void => {
       running = false
-      if (!result.ok) {
-        // Don't leave an empty folder behind. (rmdir refuses to delete one with files in it.)
-        try {
-          rmdirSync(resultsDir)
-        } catch {}
-      }
       done(result)
     }
 
-    const child = spawn(pythonPath, args, {
-      cwd: projectDir,
-      // Without this, Python holds printed lines back until the script ends,
-      // and the log would appear all at once instead of live.
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    // The manifest's command says "python"; we run our own Python in its place.
+    const child = spawn(pythonPath, command.args, {
+      cwd: workingDir,
+      // PYTHONUNBUFFERED: without it, Python holds printed lines back until the
+      // script ends, and the log would appear all at once instead of live.
+      env: { ...process.env, ...command.env, PYTHONUNBUFFERED: '1' },
     })
 
     let lastErrorLine = ''
@@ -113,7 +117,9 @@ function runProject(values: Values, sendLog: (line: string) => void): Promise<Ru
     // Fires when the script ends. Exit code 0 means success.
     child.on('close', (code) => {
       if (code === 0) {
-        lastResultsDir = resultsDir
+        // A relative results folder is relative to where the script ran.
+        const folder = results === null ? workingDir : resolve(workingDir, results)
+        lastResultsDir = existsSync(folder) ? folder : workingDir
         finish({ ok: true })
       } else if (code !== null) {
         finish({ ok: false, error: lastErrorLine || 'Something went wrong.' })
@@ -125,7 +131,7 @@ function runProject(values: Values, sendLog: (line: string) => void): Promise<Ru
 function createWindow(): void {
   const window = new BrowserWindow({
     width: 560,
-    height: 680,
+    height: 720,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
     },
@@ -139,13 +145,20 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle('manifest:load', () => loadManifest())
+  ipcMain.handle('app:load', () => loadApp())
 
-  ipcMain.handle('file:choose', async (_event, extensions?: string[]) => {
+  ipcMain.handle('files:choose', async (_event, options: ChooseFilesOptions = {}) => {
+    // The manifest writes endings with a dot (".png"); the picker wants them without.
+    const extensions = (options.accepts ?? []).map((ending) => ending.replace(/^\./, ''))
     const result = await dialog.showOpenDialog({
-      properties: ['openFile'],
-      filters: extensions?.length ? [{ name: 'Supported files', extensions }] : [],
+      properties: options.multiple ? ['openFile', 'multiSelections'] : ['openFile'],
+      filters: extensions.length ? [{ name: 'Supported files', extensions }] : [],
     })
+    return result.canceled ? [] : result.filePaths
+  })
+
+  ipcMain.handle('folder:choose', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] })
     return result.canceled ? null : result.filePaths[0]
   })
 

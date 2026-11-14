@@ -6,8 +6,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { RunnerApi } from '../shared/api'
 
 const api: RunnerApi = {
-  loadManifest: () => ipcRenderer.invoke('manifest:load'),
-  chooseFile: (extensions) => ipcRenderer.invoke('file:choose', extensions),
+  loadApp: () => ipcRenderer.invoke('app:load'),
+  chooseFiles: (options) => ipcRenderer.invoke('files:choose', options),
+  chooseFolder: () => ipcRenderer.invoke('folder:choose'),
   run: (values) => ipcRenderer.invoke('run:start', values),
   onLog: (listener) => {
     const handler = (_event: unknown, line: string): void => listener(line)
