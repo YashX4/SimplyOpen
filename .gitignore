@@ -1,0 +1,4 @@
+notes/
+node_modules/
+out/
+__pycache__/
