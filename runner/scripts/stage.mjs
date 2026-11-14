@@ -81,6 +81,13 @@ const python = join(pythonDir, process.platform === 'win32' ? 'python.exe' : 'bi
 // 3. Install the libraries the project's manifest lists.
 const { manifest, name } = JSON.parse(readFileSync(join(projectDir, 'simplyopen.json'), 'utf8'))
 const packages = manifest.dependencies.packages
+// A library name is passed straight to the installer, so refuse anything that
+// would be read as an installer option instead of a name.
+const suspicious = packages.find((spec) => spec.trim().startsWith('-'))
+if (suspicious) {
+  console.error(`Refusing to install "${suspicious}": that is not a library name.`)
+  process.exit(1)
+}
 if (packages.length) {
   console.log(`Installing libraries for "${name}": ${packages.join(', ')}`)
   run(python, [

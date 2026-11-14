@@ -1,16 +1,36 @@
-# The Factory: builds one project's app for Mac and Windows, tests each, and
-# offers the results as downloads.
+# The Factory: builds one project's app for Mac, Windows and Linux, tests each,
+# and offers the results as downloads.
 #
-# Start it by hand from the repository's Actions tab ("Run workflow"), or let
-# it run by itself when the Runner or the example projects change.
+# Three ways it starts:
+#   - By itself, when the Runner or the example projects change. Builds the
+#     image resizer example.
+#   - By hand from the repository's Actions tab ("Run workflow").
+#   - From the website, through GitHub's API, with an uploaded project:
+#       POST /repos/<owner>/<repo>/actions/workflows/build.yml/dispatches
+#       { "ref": "main", "inputs": { "build_id": "...", "project_url": "...",
+#                                    "app_url": "...", "sample_url": "..." } }
+#     The run is then titled "Build <build_id>", which is how to find it again.
 
 name: Build apps
+run-name: Build ${{ inputs.build_id || 'example project' }}
 
 on:
   workflow_dispatch:
     inputs:
+      build_id:
+        description: A name for this build, chosen by whoever starts it
+        default: manual
+      project_url:
+        description: Web address of the uploaded project zip (leave empty to build a folder in this repository)
+        default: ''
+      app_url:
+        description: Web address of the Analyzer's result for that zip (manifest, name, description)
+        default: ''
+      sample_url:
+        description: Web address of sample inputs for the test run (optional)
+        default: ''
       project:
-        description: Folder of the project to build, relative to the repository
+        description: Folder in this repository to build, when no project_url is given
         default: examples/image_resizer
   push:
     paths:
@@ -19,11 +39,16 @@ on:
       - analyzer/src/manifest/**
       - .github/workflows/build.yml
 
+# This job installs and runs code that strangers uploaded. Give it no ability
+# to change the repository, and never add passwords or keys to it.
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build for ${{ matrix.system }}
     strategy:
-      # If one system fails, still finish the other, so we see both results.
+      # If one system fails, still finish the others, so we see every result.
       fail-fast: false
       matrix:
         include:
@@ -31,16 +56,23 @@ jobs:
             os: macos-latest
           - system: Windows
             os: windows-latest
+          - system: Linux
+            os: ubuntu-latest
+            # Linux build machines have no screen; this gives the app a pretend one.
+            screen: xvfb-run -a
     runs-on: ${{ matrix.os }}
 
     defaults:
       run:
         working-directory: runner
-        # Use the same shell on both systems so the commands below are identical.
+        # Use the same shell on every system so the commands below are identical.
         shell: bash
 
     env:
       PROJECT: ${{ inputs.project || 'examples/image_resizer' }}
+      PROJECT_URL: ${{ inputs.project_url }}
+      APP_URL: ${{ inputs.app_url }}
+      SAMPLE_URL: ${{ inputs.sample_url }}
 
     steps:
       - name: Get the code
@@ -60,13 +92,25 @@ jobs:
         run: npm test
 
       - name: Gather a private Python and the project
-        run: npm run stage -- "../$PROJECT"
+        run: |
+          if [ -n "$PROJECT_URL" ]; then
+            node scripts/fetch-project.mjs "$PROJECT_URL" "$APP_URL" "$SAMPLE_URL"
+            npm run stage -- resources/upload
+          else
+            npm run stage -- "../$PROJECT"
+          fi
 
       - name: Build the app
         run: npm run package
 
-      - name: Test the built app with the project's sample inputs
-        run: npm run smoke
+      # Recent Ubuntu blocks a safety feature Electron relies on unless the app
+      # is installed system-wide. Allow it on this build machine.
+      - name: Let the app start on the Linux build machine
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Test the built app
+        run: ${{ matrix.screen }} npm run smoke
 
       # Only reached if the test above passed.
       - name: Offer the app as a download
