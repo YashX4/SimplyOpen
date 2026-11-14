@@ -1,16 +1,17 @@
-// Prepares the private Python that ships inside the app.
+// Gathers everything that goes inside one project's app, ready for packaging.
 //
 // 1. Downloads a standalone Python for this computer's system.
 // 2. Unpacks it into runner/resources/python/.
 // 3. Installs the project's libraries into that Python (and nowhere else).
+// 4. Copies the project itself into runner/resources/project/.
 //
 // Usage, from the runner folder:
-//   node scripts/fetch-python.mjs [project folder]
+//   node scripts/stage.mjs [project folder]
 // The project folder defaults to the image resizer example.
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Which Python to ship. These come from the python-build-standalone project,
@@ -88,4 +89,13 @@ if (packages.length) {
   console.log(`"${name}" needs no extra libraries.`)
 }
 
-console.log(`\nPrivate Python is ready: ${python}`)
+// 4. Copy the project in, leaving out clutter that isn't part of it.
+const stagedProjectDir = join(resourcesDir, 'project')
+const clutter = ['__pycache__', '.git', '.DS_Store', 'node_modules']
+rmSync(stagedProjectDir, { recursive: true, force: true })
+cpSync(projectDir, stagedProjectDir, {
+  recursive: true,
+  filter: (source) => !clutter.includes(basename(source)),
+})
+
+console.log(`\n"${name}" is staged in ${resourcesDir}`)

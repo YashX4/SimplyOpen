@@ -98,9 +98,16 @@ function runProject(values: Values, sendLog: (line: string) => void): Promise<Ru
     // The manifest's command says "python"; we run our own Python in its place.
     const child = spawn(pythonPath, command.args, {
       cwd: workingDir,
-      // PYTHONUNBUFFERED: without it, Python holds printed lines back until the
-      // script ends, and the log would appear all at once instead of live.
-      env: { ...process.env, ...command.env, PYTHONUNBUFFERED: '1' },
+      env: {
+        ...process.env,
+        ...command.env,
+        // Without this, Python holds printed lines back until the script ends,
+        // and the log would appear all at once instead of live.
+        PYTHONUNBUFFERED: '1',
+        // Stops Python saving cache files next to the code, which would mean
+        // writing inside the app itself.
+        PYTHONDONTWRITEBYTECODE: '1',
+      },
     })
 
     let lastErrorLine = ''
