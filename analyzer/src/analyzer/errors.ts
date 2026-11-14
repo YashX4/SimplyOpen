@@ -37,6 +37,15 @@ export class AnalyzerError extends Error {
 export class UnzipError extends AnalyzerError {}
 
 /**
+ * Thrown when the project is something the v0 manifest can't describe, so
+ * the Runner couldn't run it. For example, it isn't Python, it opens its own
+ * window (a game), it asks questions while it runs, or it has no setting for
+ * where to save its results. The message is the model's plain-English reason,
+ * safe to show to the person who uploaded it.
+ */
+export class UnsupportedProjectError extends AnalyzerError {}
+
+/**
  * Thrown when the model's answer still fails validation after the one
  * allowed retry, so no manifest can be returned. The Analyzer never returns
  * an unvalidated manifest instead. Typically chained with the last

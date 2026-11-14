@@ -8,7 +8,7 @@
  * Request: `multipart/form-data` with the zip in a file field named `file`.
  *
  * Responses:
- * - `200` `{ manifest, name, description }`. The analyzer's `rawModelOutput`
+ * - `200` `{ manifest, name, description, projectFolder, notes }`. The analyzer's `rawModelOutput`
  *   is written to the server log and never sent to the client: it is for
  *   debugging only and must not reach downstream consumers.
  * - Errors: `{ error: { code, message } }` with
@@ -16,6 +16,8 @@
  *   - `413` upload over the size limit,
  *   - `415` not a multipart request,
  *   - `422` `UnzipError` / `SchemaValidationError` (the upload can't be analyzed),
+ *     or `UnsupportedProjectError` (the project doesn't fit the v0 manifest;
+ *     the message says why, in plain English),
  *   - `502` `AnalysisFailedError` / `ClaudeApiError` (the model, an upstream
  *     dependency, failed or answered badly),
  *   - `500` anything else.
@@ -41,7 +43,14 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { analyzeZip, type AnalysisResult } from "./analyzer/analyzer.js";
-import { AnalysisFailedError, AnalyzerError, ClaudeApiError, SchemaValidationError, UnzipError } from "./analyzer/errors.js";
+import {
+  AnalysisFailedError,
+  AnalyzerError,
+  ClaudeApiError,
+  SchemaValidationError,
+  UnsupportedProjectError,
+  UnzipError,
+} from "./analyzer/errors.js";
 
 /** Default upload size limit: 50 MiB. */
 export const DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -99,7 +108,14 @@ export async function buildServer(options: ServerOptions = {}): Promise<FastifyI
       } else {
         const result = await analyze(zipPath, aborter.signal);
         request.log.info({ rawModelOutput: result.rawModelOutput }, "analysis complete");
-        const body: AnalyzeResponse = { manifest: result.manifest, name: result.name, description: result.description };
+        // Listed field by field so nothing debug-only can slip into the response.
+        const body: AnalyzeResponse = {
+          manifest: result.manifest,
+          name: result.name,
+          description: result.description,
+          projectFolder: result.projectFolder,
+          notes: result.notes,
+        };
         outcome = { status: 200, body };
       }
     } catch (error) {
@@ -169,7 +185,7 @@ function failureOutcome(log: FastifyInstance["log"], error: unknown, maxUploadBy
 
 /** HTTP status for each Analyzer error type. */
 function statusFor(error: AnalyzerError): number {
-  if (error instanceof UnzipError || error instanceof SchemaValidationError) return 422;
+  if (error instanceof UnzipError || error instanceof SchemaValidationError || error instanceof UnsupportedProjectError) return 422;
   if (error instanceof AnalysisFailedError || error instanceof ClaudeApiError) return 502;
   return 500;
 }

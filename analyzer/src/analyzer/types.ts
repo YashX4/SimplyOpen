@@ -36,8 +36,8 @@ export interface ProjectSummary {
   includedFiles: Map<string, string>;
   /**
    * `true` whenever any file's contents had to be left out for size
-   * (i.e. `skippedFiles` is not empty). Downstream confidence scoring uses it
-   * to account for the model having incomplete information.
+   * (i.e. `skippedFiles` is not empty). The analyzer then tells the model
+   * which files it could not read.
    */
   truncated: boolean;
   /** Paths of every non-excluded file whose contents were left out, listed or not. Empty when nothing was cut. */

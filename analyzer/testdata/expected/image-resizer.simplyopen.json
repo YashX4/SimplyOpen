@@ -1,0 +1,43 @@
+{
+  "manifest_version": 0,
+  "name": "Image Resizer",
+  "description": "Make a picture smaller or larger without stretching it. Specifically for the image re-sizer, each project gets its own.",
+  "entry": "resize.py",
+  "requirements": "requirements.txt",
+  "action_label": "Resize picture",
+  "inputs": [
+    {
+      "id": "image",
+      "label": "Picture to resize",
+      "type": "file",
+      "flag": null,
+      "required": true,
+      "extensions": ["png", "jpg", "jpeg", "webp"]
+    },
+    {
+      "id": "width",
+      "label": "New width (pixels)",
+      "type": "number",
+      "flag": "--width",
+      "default": "800"
+    },
+    {
+      "id": "format",
+      "label": "Save as type",
+      "type": "choice",
+      "flag": "--format",
+      "default": "png",
+      "options": [
+        {"value": "png", "label": "PNG (best quality)"},
+        {"value": "jpeg", "label": "JPEG (smaller file)"},
+        {"value": "webp", "label": "WebP (for websites)"}
+      ]
+    }
+  ],
+  "results": {"flag": "--output-dir"},
+  "sample": {
+    "image": "sample/photo.png",
+    "width": "200",
+    "format": "png"
+  }
+}
