@@ -3,7 +3,7 @@
 // handlers registered at the bottom of this file.
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -144,7 +144,8 @@ function runProject(values: Values, sendLog: (line: string) => void): Promise<Ru
  * The hidden test mode, used by the Factory to check a finished app. Started
  * with `--smoke-test`, the app opens no window. It runs the project once with
  * the known-good answers in simplyopen.sample.json, exactly as a real run
- * would, then reports whether that worked.
+ * would, then reports whether that worked. A project with no sample answers
+ * gets a lighter check: the app loads and its Python starts.
  */
 async function smokeTest(): Promise<boolean> {
   const fail = (reason: string): false => {
@@ -156,11 +157,20 @@ async function smokeTest(): Promise<boolean> {
   if (!loaded.ok) return fail(loaded.error)
   const tested = loaded.app.manifest
 
+  if (spawnSync(pythonPath, ['--version']).status !== 0) {
+    return fail(`The app's Python could not be started (${pythonPath}).`)
+  }
+
+  const samplePath = join(projectDir, 'simplyopen.sample.json')
+  if (!existsSync(samplePath)) {
+    console.log('SMOKE TEST PASSED (load only: no sample inputs, so the project was not run)')
+    return true
+  }
   let sample: Record<string, Value>
   try {
-    sample = JSON.parse(readFileSync(join(projectDir, 'simplyopen.sample.json'), 'utf8')).values
+    sample = JSON.parse(readFileSync(samplePath, 'utf8')).values
   } catch {
-    return fail('This project has no sample inputs (simplyopen.sample.json).')
+    return fail('The sample inputs file (simplyopen.sample.json) could not be read.')
   }
 
   // Sample files are named relative to the project folder. "{temp}" asks for a

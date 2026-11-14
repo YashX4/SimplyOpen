@@ -12,7 +12,8 @@
     "test": "vitest run",
     "stage": "node scripts/stage.mjs",
     "package": "electron-vite build && electron-builder --config electron-builder.config.cjs",
-    "smoke": "node scripts/smoke-test.mjs"
+    "smoke": "node scripts/smoke-test.mjs",
+    "fetch-project": "node scripts/fetch-project.mjs"
   },
   "dependencies": {
     "ajv": "^8.20.0"

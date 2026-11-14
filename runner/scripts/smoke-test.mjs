@@ -28,7 +28,7 @@ function findApp() {
           .map((folder) => join(distDir, folder, `${appName}.app`, 'Contents', 'MacOS', appName))
       : process.platform === 'win32'
         ? [join(distDir, 'win-unpacked', `${appName}.exe`)]
-        : [join(distDir, 'linux-unpacked', 'simplyopen-runner')]
+        : [join(distDir, 'linux-unpacked', 'simplyopen-app')]
   return candidates.find((candidate) => existsSync(candidate))
 }
 

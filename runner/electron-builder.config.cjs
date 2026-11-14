@@ -36,4 +36,9 @@ module.exports = {
   win: {
     target: 'zip',
   },
+  linux: {
+    target: 'zip',
+    // A fixed name for the program file, so the test script can find it.
+    executableName: 'simplyopen-app',
+  },
 }
