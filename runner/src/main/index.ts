@@ -4,7 +4,7 @@
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -25,14 +25,21 @@ import {
 
 const isWindows = process.platform === 'win32'
 
-// Where the project and Python live. In a finished app the Factory places both
-// inside the app's resources folder. During development we point at the example
-// project and borrow the Python already on this computer.
-const projectDir =
+// Where the project and Python come from. In a finished app the Factory places
+// both inside the app's resources folder. During development we point at the
+// example project and borrow the Python already on this computer.
+const bundledProjectDir =
   process.env.SIMPLYOPEN_PROJECT ??
   (app.isPackaged
     ? join(process.resourcesPath, 'project')
     : resolve(app.getAppPath(), '../examples/image_resizer'))
+
+// Where the project actually runs. Many scripts save files next to their own
+// code, and the system can refuse writes inside an installed app. So a finished
+// app works from a copy in this user's own data folder for the app
+// (see prepareProject). During development the project runs where it is.
+const runsFromCopy = app.isPackaged && !process.env.SIMPLYOPEN_PROJECT
+const projectDir = runsFromCopy ? join(app.getPath('userData'), 'project') : bundledProjectDir
 
 const pythonPath =
   process.env.SIMPLYOPEN_PYTHON ??
@@ -53,6 +60,21 @@ const workingDirFor = (m: Manifest): string =>
 let manifest: Manifest | null = null
 let lastResultsDir: string | null = null
 let running = false
+
+/**
+ * Refreshes the working copy of the project from the one inside the app. Runs
+ * at every start, so an updated app brings its updated code. Files the script
+ * created in the copy on earlier runs (its results) are left alone.
+ */
+function prepareProject(): void {
+  if (!runsFromCopy) return
+  try {
+    cpSync(bundledProjectDir, projectDir, { recursive: true, force: true })
+  } catch (error) {
+    // loadApp will then fail to read the project and show a message.
+    console.error(`Could not prepare the project: ${String(error)}`)
+  }
+}
 
 /** Reads simplyopen.json: the Analyzer's result for this project (manifest, name, description). */
 function loadApp(): LoadResult {
@@ -221,6 +243,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  prepareProject()
+
   if (process.argv.includes('--smoke-test')) {
     smokeTest().then((passed) => app.exit(passed ? 0 : 1))
     return
