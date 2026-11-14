@@ -3,34 +3,45 @@
  *
  * How the mock works, and what that means for these tests:
  * a canned answer would only test the mock. Instead, `evidenceBasedFake`
- * decides language, entry points, interface, inputs and confidence ONLY from
- * the evidence the analyzer chose to show it (`includedFiles`, `keyLines`,
- * `assetFiles`), the same evidence the real model gets. So these tests check
- * the analyzer's half of the job: that extraction, the file-selection
- * heuristic, key-line extraction, validation, retry and cleanup deliver the
- * right evidence and only ever return valid manifests. They do NOT measure
- * the real model's judgment; that needs a live eval against the same fixtures.
+ * decides whether the project fits the v0 manifest, and what goes in it,
+ * ONLY from the evidence the analyzer chose to show it (`includedFiles`,
+ * `keyLines`, `assetFiles`), the same evidence the real model gets. So these
+ * tests check the analyzer's half of the job: that extraction, the
+ * file-selection heuristic, key-line extraction, validation, retry and
+ * cleanup deliver the right evidence and only ever return valid manifests.
+ * They do NOT measure the real model's judgment; that needs a live run.
  *
  * Fixtures live in `testdata/<name>/` and are zipped into a temp dir per run.
- * The big-project fixture is generated at test time instead of committed.
+ * `image-resizer` is the Runner's own example project (from `main`), and
+ * `testdata/expected/image-resizer.simplyopen.json` is the Runner's
+ * hand-written manifest for it. The big-project fixture is generated at
+ * test time instead of committed.
  */
 
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { crc32, deflateRawSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Input, Interface, Manifest } from "../manifest/schema.js";
-import { analyzeZip } from "./analyzer.js";
+import type { Manifest, ManifestInput } from "../manifest/schema.js";
+import localSchema from "../manifest/schema.json" with { type: "json" };
+import { analyzeZip, manifestIssues } from "./analyzer.js";
 import type { ClaudeClient, RawAnalysis } from "./claudeClient.js";
+import { UnsupportedProjectError } from "./errors.js";
 import { TEMP_DIR_PREFIX } from "./projectSummary.js";
 import type { AnalysisPromptExtras } from "./prompts.js";
 import type { ProjectSummary } from "./types.js";
 
-const TESTDATA = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../testdata");
-const FIXTURES = ["transcript-python", "node-cli", "ambiguous-multi-entry", "pygame-game", "interactive-quiz", "wrapped-folder"] as const;
-type Fixture = (typeof FIXTURES)[number] | "big-project";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const TESTDATA = path.resolve(HERE, "../../testdata");
+/** The shared schema at the repository root; present once `main` is merged into this branch. */
+const SHARED_SCHEMA = path.resolve(HERE, "../../../manifest/manifest.schema.json");
+
+const FITS = ["image-resizer", "transcript-python"] as const;
+const DOES_NOT_FIT = ["node-cli", "pygame-game", "interactive-quiz", "ambiguous-multi-entry", "wrapped-folder"] as const;
+type Fixture = (typeof FITS)[number] | (typeof DOES_NOT_FIT)[number] | "big-project" | "wrapped-resizer";
 
 let workDir: string;
 let tmpRoot: string;
@@ -39,8 +50,10 @@ const zips = {} as Record<Fixture, string>;
 beforeAll(async () => {
   workDir = await mkdtemp(path.join(os.tmpdir(), "analyzer-test-"));
   tmpRoot = await mkdtemp(path.join(workDir, "tmp-"));
-  for (const name of FIXTURES) zips[name] = await zipDirectory(path.join(TESTDATA, name), path.join(workDir, `${name}.zip`));
+  for (const name of [...FITS, ...DOES_NOT_FIT]) zips[name] = await zipDirectory(path.join(TESTDATA, name), path.join(workDir, `${name}.zip`));
   zips["big-project"] = await zipDirectory(await writeBigProject(path.join(workDir, "big-project")), path.join(workDir, "big-project.zip"));
+  // The same resizer, zipped the way people often do it: as one folder.
+  zips["wrapped-resizer"] = await zipDirectory(path.join(TESTDATA, "image-resizer"), path.join(workDir, "wrapped-resizer.zip"), "image_resizer/");
 });
 
 afterAll(async () => {
@@ -51,137 +64,99 @@ afterAll(async () => {
 /* Tests                                                                    */
 /* ------------------------------------------------------------------------ */
 
+describe("the v0 contract", () => {
+  it.skipIf(!existsSync(SHARED_SCHEMA))("src/manifest/schema.json is an exact copy of the shared manifest/manifest.schema.json", async () => {
+    expect(localSchema).toEqual(JSON.parse(await readFile(SHARED_SCHEMA, "utf8")));
+  });
+
+  it("the Runner's hand-written example manifest passes every check", async () => {
+    const example = JSON.parse(await readFile(path.join(TESTDATA, "expected", "image-resizer.simplyopen.json"), "utf8")) as Manifest;
+    expect(manifestIssues(example, ["resize.py", "requirements.txt", "sample/photo.png"], "")).toEqual([]);
+  });
+});
+
 describe("analyzeZip with a mocked Claude client", () => {
-  it("transcript-python: python, one primary entry point, transcript file input required", async () => {
+  it("image-resizer: matches the Runner's own manifest for its example project", async () => {
     const { client, calls } = recordingClient();
-    const { manifest } = await analyzeZip(zips["transcript-python"], client, { tmpRoot });
+    const result = await analyzeZip(zips["image-resizer"], client, { tmpRoot });
+    const { manifest } = result;
+    const expected = JSON.parse(await readFile(path.join(TESTDATA, "expected", "image-resizer.simplyopen.json"), "utf8")) as Manifest;
 
-    expect(manifest.project.language).toBe("python");
-    expect(manifest.project.entry_points).toHaveLength(1);
-    expect(manifest.project.primary_entry_point).toBe(manifest.project.entry_points[0]!.id);
-    expect(manifest.project.entry_points[0]!.path).toBe("zoom_to_nvivo.py");
-    expect(manifest.project.entry_points[0]!.interface).toMatchObject({ kind: "command_line", exits_on_its_own: true });
-    const transcripts = manifest.inputs.find((i) => i.kind === "file" && /transcript/i.test(`${i.id} ${i.label}`));
-    expect(transcripts).toBeDefined();
-    expect(transcripts!.required).toBe(true);
-    expect(transcripts!.multiple).toBe(true); // nargs="+"
-    expect(transcripts!.help).toMatch(/\.vtt/);
+    expect(result.projectFolder).toBe("");
+    expect(manifest).toMatchObject({ manifest_version: 0, entry: expected.entry, requirements: expected.requirements, results: expected.results });
+    expect(manifest.inputs.map(({ id, type, flag, default: d }) => ({ id, type, flag, default: d }))).toEqual(
+      expected.inputs.map(({ id, type, flag, default: d }) => ({ id, type, flag, default: d })),
+    );
+    expect(manifest.inputs[0]!.required).toBe(true);
+    expect(manifest.inputs[2]!.options?.map((o) => o.value)).toEqual(expected.inputs[2]!.options?.map((o) => o.value));
+    expect(manifest.sample?.image).toBe(expected.sample?.image);
+    expect(result.name).toBe(manifest.name);
 
-    // The analyzer's part: the whole script reached the model, nothing omitted.
-    expect(calls[0]!.summary.includedFiles.has("zoom_to_nvivo.py")).toBe(true);
+    // The analyzer's part: the script and requirements were shown in full, and the sample photo was named.
+    expect(calls[0]!.summary.includedFiles.has("resize.py")).toBe(true);
+    expect(calls[0]!.summary.includedFiles.has("requirements.txt")).toBe(true);
+    expect(calls[0]!.summary.assetFiles).toEqual(["sample/photo.png"]);
+  });
+
+  it("wrapped-resizer: a project zipped as a folder gets that folder as projectFolder, and paths relative to it", async () => {
+    const { client } = recordingClient();
+    const result = await analyzeZip(zips["wrapped-resizer"], client, { tmpRoot });
+    expect(result.projectFolder).toBe("image_resizer");
+    expect(result.manifest.entry).toBe("resize.py");
+    expect(result.manifest.requirements).toBe("requirements.txt");
+    expect(result.manifest.sample?.image).toBe("sample/photo.png");
+  });
+
+  it("wrapped-resizer: an entry given relative to the zip root instead of the project folder is caught, with a fix suggested", async () => {
+    const { client, calls } = recordingClient({
+      breakFirst: (a) => { a.project_folder = ""; },
+    });
+    const result = await analyzeZip(zips["wrapped-resizer"], client, { tmpRoot });
+    const issue = calls[1]!.extras?.retry?.issues.find((i) => i.startsWith("manifest/entry"));
+    expect(issue).toMatch(/no "resize.py" in the project \(it exists at "image_resizer\/resize.py"/);
+    expect(result.projectFolder).toBe("image_resizer");
+  });
+
+  it("transcript-python: positional file input, results folder flag, and the on/off option left out with a note", async () => {
+    const { client, calls } = recordingClient();
+    const { manifest, notes } = await analyzeZip(zips["transcript-python"], client, { tmpRoot });
+
+    expect(manifest.entry).toBe("zoom_to_nvivo.py");
+    expect(manifest.results.flag).toBe("--output-dir");
+    expect(manifest.inputs).toEqual([{ id: "transcripts", label: "transcripts", type: "file", flag: null, required: true, extensions: ["vtt"] }]);
+    expect(manifest.requirements).toBeUndefined();
+    expect(notes.some((n) => /--keep-timestamps/.test(n))).toBe(true);
     expect(calls[0]!.summary.truncated).toBe(false);
   });
 
-  it("node-cli: node, several entry points, primary matches package.json main", async () => {
+  it("big-project: entry and settings found from key lines even though the code didn't fit", async () => {
     const { client, calls } = recordingClient();
-    const { manifest } = await analyzeZip(zips["node-cli"], client, { tmpRoot });
-    const pkg = JSON.parse(await readFile(path.join(TESTDATA, "node-cli", "package.json"), "utf8")) as { main: string };
-
-    expect(manifest.project.language).toBe("node");
-    expect(manifest.project.entry_points.length).toBeGreaterThan(1);
-    const primary = manifest.project.entry_points.find((e) => e.id === manifest.project.primary_entry_point);
-    expect(primary?.path).toBe(pkg.main);
-
-    // The analyzer's part: package.json (the disambiguating evidence) was shown in full.
-    expect(calls[0]!.summary.includedFiles.has("package.json")).toBe(true);
-  });
-
-  it("ambiguous-multi-entry: confidence below high, with a note about the ambiguity", async () => {
-    const { client, calls } = recordingClient();
-    const { manifest } = await analyzeZip(zips["ambiguous-multi-entry"], client, { tmpRoot });
-
-    expect(manifest.confidence.overall).not.toBe("high");
-    expect(manifest.confidence.notes.some((n) => /unclear|ambiguous|more than one/i.test(n))).toBe(true);
-    // The analyzer's part: both candidate scripts were visible, so the ambiguity is real, not caused by omission.
-    expect([...calls[0]!.summary.includedFiles.keys()].sort()).toEqual(["rename_photos.py", "resize_photos.py"]);
-  });
-
-  it("pygame-game: own window that runs until closed, with controls, assets and the pygame package", async () => {
-    const { client, calls } = recordingClient();
-    const { manifest } = await analyzeZip(zips["pygame-game"], client, { tmpRoot });
-    const entry = manifest.project.entry_points[0]!;
-
-    expect(entry.path).toBe("game.py");
-    expect(entry.interface.kind).toBe("own_window");
-    expect(entry.interface.exits_on_its_own).toBe(false);
-    const keys = entry.interface.controls.flatMap((c) => c.keys);
-    expect(keys).toEqual(expect.arrayContaining(["Left arrow", "Right arrow", "Escape"]));
-    expect(manifest.project.assets).toEqual(["assets/**"]);
-    expect(manifest.dependencies.packages).toEqual(["pygame>=2.5"]);
-    expect(manifest.inputs).toEqual([]);
-
-    // The analyzer's part: asset files were named (never read), and the game code was shown in full.
-    expect(calls[0]!.summary.assetFiles).toEqual(["assets/basket.png", "assets/ding.wav", "assets/star.png"]);
-    expect(calls[0]!.summary.fileTree.map((f) => f.path)).not.toContain("assets/basket.png");
-    expect(calls[0]!.summary.includedFiles.has("game.py")).toBe(true);
-  });
-
-  it("interactive-quiz: interactive terminal with the questions it asks, in order", async () => {
-    const { client } = recordingClient();
-    const { manifest } = await analyzeZip(zips["interactive-quiz"], client, { tmpRoot });
-    const ui = manifest.project.entry_points[0]!.interface;
-
-    expect(ui.kind).toBe("interactive_terminal");
-    expect(ui.prompts.map((p) => p.question)).toEqual([
-      "What's your name?",
-      "How many questions would you like?",
-      "Pick a level (easy/hard):",
-    ]);
-    expect(ui.prompts.map((p) => p.kind)).toEqual(["text", "number", "choice"]);
-    expect(ui.prompts[2]!.choices).toEqual(["easy", "hard"]);
-    expect(ui.server).toBeNull();
-  });
-
-  it("big-project: entry point found from key lines even though its code didn't fit", async () => {
-    const { client, calls } = recordingClient();
-    const { manifest } = await analyzeZip(zips["big-project"], client, { tmpRoot });
+    const { manifest, notes } = await analyzeZip(zips["big-project"], client, { tmpRoot });
     const { summary, extras } = calls[0]!;
 
     // The analyzer's part: main.py was too big to include, but its telling lines and the omission were passed on.
     expect(summary.truncated).toBe(true);
     expect(summary.includedFiles.has("main.py")).toBe(false);
     const mainLines = summary.keyLines.filter((k) => k.path === "main.py").map((k) => k.text);
-    expect(mainLines).toEqual(expect.arrayContaining([expect.stringMatching(/__name__ == "__main__"/), expect.stringMatching(/add_argument\("--rows"/)]));
+    expect(mainLines).toEqual(expect.arrayContaining([expect.stringMatching(/__name__ == "__main__"/), expect.stringMatching(/add_argument\("--output-dir"/)]));
     expect(extras?.omittedFiles).toContain("main.py");
 
     // ...so the (fake) model could still describe it, and said its view was partial.
-    expect(manifest.project.entry_points[0]!.path).toBe("main.py");
-    expect(manifest.inputs.map((i) => i.id)).toEqual(["data", "rows"]);
-    expect(manifest.inputs[1]).toMatchObject({ kind: "number", min: 1, max: 1000 });
-    expect(manifest.confidence.overall).not.toBe("high");
-    expect(manifest.confidence.notes.some((n) => /could not be read in full/i.test(n))).toBe(true);
+    expect(manifest.entry).toBe("main.py");
+    expect(manifest.inputs.map((i) => [i.id, i.type, i.flag])).toEqual([["data", "file", null], ["rows", "number", "--rows"]]);
+    expect(manifest.results.flag).toBe("--output-dir");
+    expect(notes.some((n) => /could not be read in full/i.test(n))).toBe(true);
   });
 
-  it("wrapped-folder: a project zipped as a folder runs from that folder, so relative assets load", async () => {
+  it.each(DOES_NOT_FIT)("%s: doesn't fit v0, so it's turned down with a plain-English reason (no retry)", async (fixture) => {
     const { client, calls } = recordingClient();
-    const { manifest } = await analyzeZip(zips["wrapped-folder"], client, { tmpRoot });
-    const entry = manifest.project.entry_points[0]!;
-
-    expect(entry.path).toBe("star-game/main.py");
-    expect(entry.working_directory).toBe("star-game");
-    expect(entry.run_command).toBe("python main.py {args}");
-    expect(manifest.project.assets).toEqual(["star-game/assets/**"]);
-    expect(calls[0]!.summary.assetFiles).toEqual(["star-game/assets/star.png"]);
+    const failure = await analyzeZip(zips[fixture], client, { tmpRoot }).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(UnsupportedProjectError);
+    expect((failure as Error).message.length).toBeGreaterThan(0);
+    expect(calls).toHaveLength(1);
   });
 
-  it("wrapped-folder: the raycaster bug (run_command relative to the wrong folder) is caught, with a fix suggested", async () => {
-    const calls: RecordedCall[] = [];
-    const client: ClaudeClient = {
-      async analyzeProject(summary, _signal, extras) {
-        calls.push({ summary, extras });
-        const answer = evidenceBasedFake(summary);
-        // First attempt: what the live API returned for the user's raycaster: right path, wrong folder.
-        if (calls.length === 1) (answer.manifest as Manifest).project.entry_points[0]!.working_directory = "";
-        return answer;
-      },
-    };
-    const { manifest } = await analyzeZip(zips["wrapped-folder"], client, { tmpRoot });
-    const issue = calls[1]!.extras?.retry?.issues.find((i) => /refers to "main.py"/.test(i));
-    expect(issue).toMatch(/it exists at "star-game\/main.py"; set working_directory to "star-game"/);
-    expect(manifest.project.entry_points[0]!.working_directory).toBe("star-game");
-  });
-
-  it.each([...FIXTURES, "big-project"] as const)("retry: invalid JSON first, then a valid answer (%s)", async (fixture) => {
+  it.each([...FITS, "big-project", "wrapped-resizer"] as const)("retry: invalid JSON first, then a valid answer (%s)", async (fixture) => {
     const { client, calls } = recordingClient({ firstAnswerInvalidJson: true });
     const result = await analyzeZip(zips[fixture], client, { tmpRoot });
 
@@ -190,64 +165,74 @@ describe("analyzeZip with a mocked Claude client", () => {
     expect(calls[1]!.extras?.retry?.issues.length).toBeGreaterThan(0);
     expect(calls[1]!.extras?.retry?.previousAnswer).toContain("{not valid json");
     expect(result.rawModelOutput).toHaveLength(2);
-    expect(result.manifest.schema_version).toBe("1.0");
+    expect(result.manifest.manifest_version).toBe(0);
   });
 
-  // Each contract rule JSON Schema can't express, broken once: the analyzer must reject the answer and say why on the retry.
-  const brokenRules: [string, (m: Manifest) => void, RegExp][] = [
-    ["{port} outside a local server", (m) => { m.project.entry_points[0]!.run_command = "python game.py {port}"; }, /\{port\}" is only allowed/],
-    ["server details on a non-server", (m) => { m.project.entry_points[0]!.interface.server = { port: 1, port_binding: null, url_path: "/", ready_text: null }; }, /server: must be set when kind is "local_server" and null otherwise/],
-    ["prompts on a non-interactive program", (m) => { m.project.entry_points[0]!.interface.prompts = [{ question: "x", kind: "text", choices: [] }]; }, /prompts: must be empty unless/],
-    ["unknown run_command placeholder", (m) => { m.project.entry_points[0]!.run_command = "python game.py {level}"; }, /"\{level\}" is not allowed/],
-    ["boolean binding with {value}", (m) => { m.inputs.push(makeInput({ id: "fast", kind: "boolean", required: false, cli_binding: "--fast {value}" })); }, /boolean's binding is a plain flag/],
-    ["text binding without {value}", (m) => { m.inputs.push(makeInput({ id: "name", kind: "text", required: false, cli_binding: "--name" })); }, /must contain "\{value\}" exactly once/],
-    ["invalid env var name", (m) => { m.inputs.push(makeInput({ id: "key", kind: "text", required: true, secret: true, env_binding: "API KEY" })); }, /not a valid environment variable name/],
-    ["multiple on a non-file input", (m) => { m.inputs.push(makeInput({ id: "n", kind: "text", required: false, multiple: true, cli_binding: "{value}" })); }, /multiple: can only be true for a "file" input/],
-    ["min/max on a non-number", (m) => { m.inputs.push(makeInput({ id: "t", kind: "text", required: false, min: 1, cli_binding: "{value}" })); }, /min and max must be null unless kind is "number"/],
-    ["min greater than max", (m) => { m.inputs.push(makeInput({ id: "n", kind: "number", required: false, min: 9, max: 1, cli_binding: "{value}" })); }, /min is greater than max/],
-    ["choice default not in choices", (m) => { m.inputs.push(makeInput({ id: "c", kind: "choice", required: false, choices: ["a"], default: "z", cli_binding: "{value}" })); }, /"z" is not one of the choices/],
-    ["console output with a path", (m) => { m.outputs.push({ id: "o", kind: "console", label: "Score", path_pattern: "score.txt" }); }, /must be null for a "console" output/],
-    ["path_pattern naming no input", (m) => { m.outputs.push({ id: "o", kind: "folder", label: "Saves", path_pattern: "{save_dir}" }); }, /"\{save_dir\}" does not match any input id/],
-    ["run_command naming a missing file", (m) => { m.project.entry_points[0]!.run_command = "python main.py {args}"; }, /refers to "main.py", but there is no "main.py" in the project/],
-    ["working_directory that isn't a folder", (m) => { m.project.entry_points[0]!.working_directory = "src"; }, /working_directory: "src" is not a folder in the project tree/],
-    ["working_directory starting with ./", (m) => { m.project.entry_points[0]!.working_directory = "./"; }, /working_directory: "\.\/" must not start with "\.\/"/],
-    ["server port_binding without {port}", (m) => { m.project.entry_points[0]!.interface = { kind: "local_server", exits_on_its_own: false, controls: [], prompts: [], server: { port: 5000, port_binding: "--port {value}", url_path: "/", ready_text: null } }; }, /run_command must contain "\{port\}"/],
-    ["cli inputs but no {args}", (m) => { m.project.entry_points[0]!.run_command = "python game.py"; m.inputs.push(makeInput({ id: "level", kind: "text", required: false, cli_binding: "--level {value}" })); }, /must contain "\{args\}"/],
-    ["env_binding not in reads_env_vars", (m) => { m.inputs.push(makeInput({ id: "key", kind: "text", required: true, secret: true, env_binding: "GAME_KEY" })); }, /"GAME_KEY" must also be listed in capabilities.reads_env_vars/],
-    ["accepts without a dot", (m) => { m.inputs.push(makeInput({ id: "map", kind: "file", required: false, accepts: ["json"], cli_binding: "{value}" })); }, /"json" must be a lower-case extension starting with a dot/],
-    ["required unbound input at high confidence", (m) => { m.inputs.push(makeInput({ id: "name", kind: "text", required: true })); }, /can't be filled in automatically, so confidence.overall can't be "high"/],
-    ["asset path starting with ./", (m) => { m.project.assets = ["./assets/**"]; }, /"\.\/assets\/\*\*" must not start with "\.\/"/],
-    ["absolute output path", (m) => { m.outputs.push({ id: "o", kind: "folder", label: "Saves", path_pattern: "/tmp/saves" }); }, /must stay inside the project/],
+  // Each rule broken once on the image resizer: the analyzer must reject the answer and say why on the retry.
+  const brokenRules: [string, (m: Manifest, a: Answer) => void, RegExp][] = [
+    // schema.json
+    ["input id that isn't snake_case (pattern)", (m) => { m.inputs[0]!.id = "Image"; }, /inputs\/0\/id: must match the pattern/],
+    ["empty label (minLength)", (m) => { m.inputs[0]!.label = ""; }, /inputs\/0\/label: must be at least 1 character/],
+    ["choice without options (if/then)", (m) => { delete m.inputs[2]!.options; }, /inputs\/2: is missing required property "options"/],
+    ["extension with a dot (pattern)", (m) => { m.inputs[0]!.extensions = [".png"]; }, /inputs\/0\/extensions\/0: must match the pattern/],
+    ["unknown field", (m) => { (m as unknown as Record<string, unknown>).confidence = "high"; }, /has unexpected property "confidence"/],
+    ["wrong version", (m) => { (m as unknown as Record<string, unknown>).manifest_version = 1; }, /manifest_version: must be 0/],
+    // Files
+    ["entry that doesn't exist", (m) => { m.entry = "main.py"; }, /entry: there is no "main.py" in the project/],
+    ["entry that isn't Python", (m) => { m.entry = "requirements.txt"; }, /must be a Python \(.py\) file/],
+    ["entry starting with ./", (m) => { m.entry = "./resize.py"; }, /must not start with "\.\/"/],
+    ["requirements that don't exist", (m) => { m.requirements = "requirements-dev.txt"; }, /requirements: there is no "requirements-dev.txt"/],
+    ["project_folder that isn't a folder", (_m, a) => { a.project_folder = "src"; }, /project_folder: "src" is not a folder/],
+    // Inputs
+    ["duplicate input id", (m) => { m.inputs[1]!.id = "image"; }, /"image" is used more than once/],
+    ["flag without dashes", (m) => { m.inputs[1]!.flag = "width"; }, /"width" must look like "-x" or "--name"/],
+    ["flag with the value in it", (m) => { m.inputs[1]!.flag = "--width {value}"; }, /must look like "-x" or "--name"/],
+    ["input reusing the results flag", (m) => { m.inputs[1]!.flag = "--output-dir"; }, /"--output-dir" is already used at \/inputs\/1\/flag/],
+    ["optional positional input", (m) => { m.inputs[0]!.required = false; }, /passed by position, so it must be required/],
+    ["extensions on a number", (m) => { m.inputs[1]!.extensions = ["png"]; }, /only file inputs have extensions/],
+    ["upper-case extension", (m) => { m.inputs[0]!.extensions = ["PNG"]; }, /"PNG" must be lower case/],
+    ["options on a text input", (m) => { m.inputs.push({ id: "title", label: "Title", type: "text", flag: "--title", options: [{ value: "a", label: "A" }] }); }, /only choice inputs have options/],
+    ["repeated option value", (m) => { m.inputs[2]!.options!.push({ value: "png", label: "Again" }); }, /value "png" is used more than once/],
+    ["default on a file input", (m) => { m.inputs[0]!.default = "photo.png"; }, /file inputs have no default/],
+    ["choice default that isn't an option", (m) => { m.inputs[2]!.default = "gif"; }, /default: "gif" is not one of the option values/],
+    ["number default that isn't a number", (m) => { m.inputs[1]!.default = "wide"; }, /default: "wide" is not a number/],
+    // Sample
+    ["sample for an unknown input", (m) => { m.sample = { ...m.sample, height: "5" }; }, /sample\/height: "height" is not the id of any input/],
+    ["sample missing a required input", (m) => { m.sample = {}; }, /sample\/image: every required input needs a sample value/],
+    ["sample file that doesn't exist", (m) => { m.sample = { image: "sample/cat.png" }; }, /no "sample\/cat.png"/],
+    ["sample file with the wrong extension", (m) => { m.inputs[0]!.extensions = ["jpg"]; }, /doesn't end in one of the allowed extensions \(jpg\)/],
+    ["sample choice that isn't an option", (m) => { m.sample = { ...m.sample, format: "gif" }; }, /sample\/format: "gif" is not one of the option values/],
+    // Words
+    ["long button label", (m) => { m.action_label = "Make this picture a different size right now"; }, /action_label: must be a short button label/],
+    ["name that's a sentence", (m) => { m.name = "A tool that makes your pictures bigger or smaller for you"; }, /name: must be a few words/],
+    ["description with jargon", (m) => { m.description = "A command-line tool that resizes images."; }, /must avoid technical words for non-coders \(found: command-line\)/],
+    // The answer's shape
+    ["both a manifest and a reason", (_m, a) => { a.unsupported_reason = "It is a game."; }, /Exactly one of manifest and unsupported_reason/],
+    ["notes that aren't a list", (_m, a) => { a.notes = "none"; }, /notes: must be a list of strings/],
   ];
-  it.each(brokenRules)("contract rule: %s is rejected and explained on the retry", async (_label, breakIt, explanation) => {
-    const calls: RecordedCall[] = [];
-    let attempt = 0;
-    const client: ClaudeClient = {
-      async analyzeProject(summary, _signal, extras) {
-        calls.push({ summary, extras });
-        const answer = evidenceBasedFake(summary);
-        if (attempt++ === 0) breakIt(answer.manifest as Manifest);
-        return answer;
-      },
-    };
-    const result = await analyzeZip(zips["pygame-game"], client, { tmpRoot });
+  it.each(brokenRules)("rule: %s is rejected and explained on the retry", async (_label, breakIt, explanation) => {
+    const { client, calls } = recordingClient({ breakFirst: (a) => breakIt(a.manifest as Manifest, a) });
+    const result = await analyzeZip(zips["image-resizer"], client, { tmpRoot });
     expect(calls).toHaveLength(2);
-    expect(calls[1]!.extras?.retry?.issues.some((issue) => explanation.test(issue))).toBe(true);
-    expect(result.manifest.project.entry_points[0]!.interface.kind).toBe("own_window");
+    expect(calls[1]!.extras?.retry?.issues.some((issue) => explanation.test(issue)), JSON.stringify(calls[1]!.extras?.retry?.issues)).toBe(true);
+    expect(result.manifest.entry).toBe("resize.py");
   });
 
-  it("concurrency: 5 simultaneous calls across transcript-python and node-cli don't leak state", async () => {
+  it("an empty unsupported_reason is rejected and retried, not passed on", async () => {
+    const { client, calls } = recordingClient({ breakFirst: (a) => { a.manifest = null; a.unsupported_reason = "  "; } });
+    const result = await analyzeZip(zips["image-resizer"], client, { tmpRoot });
+    expect(calls[1]!.extras?.retry?.issues).toContain("/unsupported_reason: must be a non-empty string");
+    expect(result.manifest.entry).toBe("resize.py");
+  });
+
+  it("concurrency: 5 simultaneous calls across image-resizer and transcript-python don't leak state", async () => {
     // Ground truth is fixed per fixture, NOT computed by running the code under
     // test, so state shared between calls can't make both sides wrong together.
     const truth = {
-      "transcript-python": { language: "python", primaryPath: "zoom_to_nvivo.py", files: ["zoom_to_nvivo.py"] },
-      "node-cli": {
-        language: "node",
-        primaryPath: "src/tidy.js",
-        files: ["package.json", "scripts/clean-output.js", "src/lib/csv.js", "src/tidy.js"],
-      },
+      "image-resizer": { entry: "resize.py", files: ["requirements.txt", "resize.py"] },
+      "transcript-python": { entry: "zoom_to_nvivo.py", files: ["zoom_to_nvivo.py"] },
     };
-    const order = ["transcript-python", "node-cli", "transcript-python", "node-cli", "transcript-python"] as const;
+    const order = ["image-resizer", "transcript-python", "image-resizer", "transcript-python", "image-resizer"] as const;
 
     // One recording client per call, so every summary is attributable to its own request.
     const runs = order.map((fixture) => {
@@ -257,10 +242,7 @@ describe("analyzeZip with a mocked Claude client", () => {
     const results = await Promise.all(runs.map((r) => r.result));
 
     runs.forEach(({ fixture, recorder }, i) => {
-      const { manifest } = results[i]!;
-      const primary = manifest.project.entry_points.find((e) => e.id === manifest.project.primary_entry_point);
-      expect(manifest.project.language).toBe(truth[fixture].language);
-      expect(primary?.path).toBe(truth[fixture].primaryPath);
+      expect(results[i]!.manifest.entry).toBe(truth[fixture].entry);
       expect(recorder.calls).toHaveLength(1);
       expect(recorder.calls[0]!.summary.fileTree.map((f) => f.path).sort()).toEqual(truth[fixture].files);
     });
@@ -278,24 +260,26 @@ interface RecordedCall {
   extras: AnalysisPromptExtras | undefined;
 }
 
+/** The model's answer, before `rawModelOutput` is added. */
+type Answer = Omit<RawAnalysis, "rawModelOutput">;
+
 /** A ClaudeClient fake that records every call and answers via {@link evidenceBasedFake}. */
-function recordingClient(options: { firstAnswerInvalidJson?: boolean; randomDelayMs?: number } = {}): {
-  client: ClaudeClient;
-  calls: RecordedCall[];
-} {
+function recordingClient(
+  options: { firstAnswerInvalidJson?: boolean; randomDelayMs?: number; breakFirst?: (answer: Answer) => void } = {},
+): { client: ClaudeClient; calls: RecordedCall[] } {
   const calls: RecordedCall[] = [];
-  let first = true;
   const client: ClaudeClient = {
     async analyzeProject(summary, _signal, extras) {
       calls.push({ summary, extras });
+      const first = calls.length === 1;
       if (options.randomDelayMs) await new Promise((r) => setTimeout(r, Math.random() * options.randomDelayMs!));
       if (first && options.firstAnswerInvalidJson) {
-        first = false;
         const garbage = "{not valid json";
-        return { name: undefined, description: undefined, manifest: garbage, rawModelOutput: garbage };
+        return { project_folder: undefined, manifest: garbage, unsupported_reason: undefined, notes: undefined, rawModelOutput: garbage };
       }
-      first = false;
-      return evidenceBasedFake(summary);
+      const answer = evidenceBasedFake(summary);
+      if (first && options.breakFirst) options.breakFirst(answer);
+      return { ...answer, rawModelOutput: JSON.stringify(answer) };
     },
   };
   return { client, calls };
@@ -305,122 +289,60 @@ function recordingClient(options: { firstAnswerInvalidJson?: boolean; randomDela
  * Stand-in for the model. Uses only the evidence in the summary (full files,
  * key lines, asset names). Deliberately simple rules, enough for the fixtures.
  */
-function evidenceBasedFake(summary: ProjectSummary): RawAnalysis {
-  const pkgPath = [...summary.includedFiles.keys()].find((p) => path.posix.basename(p) === "package.json");
-  const manifest = pkgPath ? fakeNode(summary.includedFiles, pkgPath) : fakePython(summary);
-  return { manifest, name: "Test Tool", description: "Does one helpful job with your files.", rawModelOutput: JSON.stringify(manifest) };
-}
-
-const COMMAND_LINE: Interface = { kind: "command_line", exits_on_its_own: true, controls: [], prompts: [], server: null };
-
-function baseManifest(language: string, entryPoints: Manifest["project"]["entry_points"], primary: string): Manifest {
-  return {
-    schema_version: "1.0",
-    project_kind: "app_or_tool",
-    project: { language, language_version: null, entry_points: entryPoints, primary_entry_point: primary, build_command: null, assets: [] },
-    inputs: [],
-    outputs: [],
-    dependencies: { runtime: [], packages: [], system: [], operating_systems: ["macos", "windows", "linux"] },
-    capabilities: { network_access: false, filesystem_access: "declared_inputs_outputs_only", reads_env_vars: [], runs_other_programs: false },
-    confidence: { overall: "high", notes: [] },
-  };
-}
-
-/** An input with every required field, defaults filled in. */
-function makeInput(fields: Pick<Input, "id" | "kind" | "required"> & Partial<Input>): Input {
-  return { label: fields.id.replace(/_/g, " "), help: null, multiple: false, min: null, max: null, secret: false, cli_binding: null, env_binding: null, ...fields };
-}
-
-function fakeNode(files: Map<string, string>, pkgPath: string): Manifest {
-  const pkg = JSON.parse(files.get(pkgPath)!) as { main?: string; scripts?: Record<string, string> };
-  const scriptPaths = Object.values(pkg.scripts ?? {}).flatMap((cmd) => /node\s+(\S+\.js)/.exec(cmd)?.[1] ?? []);
-  const paths = [...new Set([pkg.main, ...scriptPaths].filter((p): p is string => !!p))];
-  const entries = paths.map((p) => ({
-    id: path.posix.basename(p, ".js").replace(/\W+/g, "_"),
-    path: p,
-    working_directory: "",
-    run_command: `node ${p} {args}`,
-    description: `Runs ${path.posix.basename(p)}`,
-    interface: COMMAND_LINE,
-  }));
-  const primary = entries.find((e) => e.path === pkg.main) ?? entries[0]!;
-  const m = baseManifest("node", entries, primary.id);
-  m.inputs = [makeInput({ id: "csv_file", kind: "file", label: "CSV file", required: true, accepts: [".csv"], cli_binding: "{value}" })];
-  return m;
-}
-
-/** pygame key constants → plain-English action and key name. */
-const PYGAME_KEYS: Record<string, [action: string, key: string]> = {
-  K_LEFT: ["Move left", "Left arrow"], K_a: ["Move left", "A"],
-  K_RIGHT: ["Move right", "Right arrow"], K_d: ["Move right", "D"],
-  K_SPACE: ["Jump", "Space"], K_p: ["Pause", "P"], K_ESCAPE: ["Quit", "Escape"],
-};
-
-function fakePython(summary: ProjectSummary): Manifest {
-  // Evidence per file: full text when shown, otherwise only its key lines.
-  const sources = new Map<string, string>([...summary.includedFiles].filter(([p]) => p.endsWith(".py")));
-  for (const k of summary.keyLines) if (!sources.has(k.path)) sources.set(k.path, "");
-  for (const k of summary.keyLines) if (!summary.includedFiles.has(k.path)) sources.set(k.path, `${sources.get(k.path)}\n${k.text}`);
-
-  const scripts = [...sources].filter(([, text]) => /__name__\s*==\s*["']__main__["']/.test(text));
-  const code = scripts[0]![1];
-
-  let ui: Interface = COMMAND_LINE;
-  if (/\bpygame\b/.test(code)) {
-    const controls = new Map<string, string[]>();
-    for (const [constant, [action, key]] of Object.entries(PYGAME_KEYS)) {
-      if (new RegExp(`\\b${constant}\\b`).test(code)) controls.set(action, [...(controls.get(action) ?? []), key]);
-    }
-    ui = { kind: "own_window", exits_on_its_own: false, controls: [...controls].map(([action, keys]) => ({ action, keys })), prompts: [], server: null };
-  } else if (/\binput\(\s*"/.test(code)) {
-    const prompts = [...code.matchAll(/(int\()?input\(\s*"([^"]+)"/g)].map(([, asInt, question]) => {
-      const options = /\(([a-z]+)\/([a-z]+)\)/.exec(question!);
-      return { question: question!.trim(), kind: asInt ? ("number" as const) : options ? ("choice" as const) : ("text" as const), choices: options ? [options[1]!, options[2]!] : [] };
-    });
-    ui = { kind: "interactive_terminal", exits_on_its_own: true, controls: [], prompts, server: null };
+function evidenceBasedFake(summary: ProjectSummary): Answer {
+  const notes: string[] = [];
+  const unsupported = (reason: string): Answer => ({ project_folder: "", manifest: null, unsupported_reason: reason, notes });
+  if ([...summary.includedFiles.keys()].some((p) => path.posix.basename(p) === "package.json")) {
+    return unsupported("This project isn't written in Python, and SimplyOpen can only run Python for now.");
   }
 
-  const paths = [...summary.fileTree.map((f) => f.path), ...summary.assetFiles];
-  const top = paths[0]!.split("/")[0]!;
-  const workingDirectory = paths.every((f) => f.startsWith(`${top}/`)) ? top : "";
-  const entries = scripts.map(([p]) => ({
-    id: path.posix.basename(p, ".py"),
-    path: p,
-    working_directory: workingDirectory,
-    run_command: `python ${workingDirectory ? p.slice(workingDirectory.length + 1) : p} {args}`,
-    description: `Runs ${path.posix.basename(p)}`,
-    interface: ui,
-  }));
-  const m = baseManifest("python", entries, entries[0]!.id);
+  // Evidence per file: full text when shown, otherwise only its key lines.
+  const sources = new Map<string, string>([...summary.includedFiles].filter(([p]) => p.endsWith(".py")));
+  for (const k of summary.keyLines) if (!summary.includedFiles.has(k.path)) sources.set(k.path, `${sources.get(k.path) ?? ""}\n${k.text}`);
+  const scripts = [...sources].filter(([, text]) => /__name__\s*==\s*["']__main__["']/.test(text));
+  const [scriptPath, code] = scripts[0]!;
+  if (scripts.length > 1) notes.push(`More than one script could be the main one (${scripts.map(([p]) => p).join(", ")}); the first was picked.`);
+  if (summary.truncated) notes.push("Some files could not be read in full, so details may be missing.");
 
-  // Inputs from argparse calls: positional -> required file; store_true -> boolean; type=int -> number; other options -> folder/text.
-  // One add_argument call per line; read to the line's final ")" so parentheses inside help text or range(...) survive.
+  if (/\bpygame\b/.test(code)) return unsupported("This is a game that opens its own window, which SimplyOpen can't run yet.");
+  if (/\binput\(/.test(code)) return unsupported("This program asks questions while it runs, which SimplyOpen can't show yet.");
+
+  const all = [...summary.fileTree.map((f) => f.path), ...summary.assetFiles];
+  const top = all[0]!.split("/")[0]!;
+  const folder = all.every((f) => f.startsWith(`${top}/`)) ? top : "";
+  const local = (p: string): string => (folder ? p.slice(folder.length + 1) : p);
+
+  // Settings from argparse calls, one per line; read to the line's final ")" so parentheses inside survive.
+  const inputs: ManifestInput[] = [];
+  let resultsFlag: string | undefined;
   for (const call of code.matchAll(/add_argument\(\s*"([^"]+)"(.*)\)\s*$/gm)) {
     const [, flag, rest] = call as unknown as [string, string, string];
     const id = flag.replace(/^-+/, "").replace(/-/g, "_");
-    const help = /help="([^"]+)"/.exec(rest)?.[1] ?? null;
-    if (!flag.startsWith("-")) {
-      m.inputs.push(makeInput({ id, kind: "file", required: true, help, multiple: /nargs="[+*]"/.test(rest), cli_binding: "{value}", ...(code.includes(".vtt") ? { accepts: [".vtt"] } : {}) }));
-    } else if (rest.includes("store_true")) {
-      m.inputs.push(makeInput({ id, kind: "boolean", required: false, help, cli_binding: flag }));
-    } else if (rest.includes("type=int")) {
-      const range = /range\((\d+),\s*(\d+)\)/.exec(rest);
-      m.inputs.push(makeInput({ id, kind: "number", required: false, help, cli_binding: `${flag} {value}`, min: range ? Number(range[1]) : null, max: range ? Number(range[2]) - 1 : null }));
-    } else {
-      m.inputs.push(makeInput({ id, kind: id.endsWith("dir") ? "folder" : "text", required: false, help, cli_binding: `${flag} {value}` }));
-    }
+    const defaultValue = /default=["']?([\w.-]+)/.exec(rest)?.[1];
+    if (/(output|out)_dir$/.test(id)) resultsFlag = flag;
+    else if (!flag.startsWith("-")) inputs.push({ id, label: id.replace(/_/g, " "), type: "file", flag: null, required: true, ...(code.includes(".vtt") ? { extensions: ["vtt"] } : {}) });
+    else if (rest.includes("store_true")) notes.push(`The on/off setting ${flag} can't be shown, so it was left out.`);
+    else if (rest.includes("type=int")) inputs.push({ id, label: id, type: "number", flag, ...(defaultValue ? { default: defaultValue } : {}) });
+    else if (/choices=\[/.test(rest)) {
+      const values = [.../choices=\[([^\]]*)\]/.exec(rest)![1]!.matchAll(/"([^"]+)"/g)].map((x) => x[1]!);
+      inputs.push({ id, label: id, type: "choice", flag, options: values.map((value) => ({ value, label: value })), ...(defaultValue ? { default: defaultValue } : {}) });
+    } else inputs.push({ id, label: id, type: "text", flag });
   }
+  if (!resultsFlag) return unsupported("This program has no setting for where to save its results, which SimplyOpen needs.");
 
-  const requirements = summary.includedFiles.get("requirements.txt");
-  if (requirements) m.dependencies.packages = requirements.split("\n").map((l) => l.trim()).filter(Boolean);
-  const assetDir = workingDirectory ? `${workingDirectory}/assets/` : "assets/";
-  if (summary.assetFiles.length > 0 && summary.assetFiles.every((p) => p.startsWith(assetDir))) m.project.assets = [`${assetDir}**`];
-
-  const notes: string[] = [];
-  if (entries.length > 1) notes.push(`More than one script could be the main one (${entries.map((e) => e.path).join(", ")}); it is unclear which is meant.`);
-  if (summary.truncated) notes.push("Some files could not be read in full, so details may be missing.");
-  if (notes.length > 0) m.confidence = { overall: "medium", notes };
-  return m;
+  const manifest: Manifest = {
+    manifest_version: 0,
+    name: "Test Tool",
+    description: "Does one helpful job with your files.",
+    entry: local(scriptPath),
+    inputs,
+    results: { flag: resultsFlag },
+  };
+  if (all.includes(folder ? `${folder}/requirements.txt` : "requirements.txt")) manifest.requirements = "requirements.txt";
+  const sampleFile = all.map(local).find((p) => p.startsWith("sample/"));
+  const fileInput = inputs.find((i) => i.type === "file");
+  if (sampleFile && fileInput) manifest.sample = { [fileInput.id]: sampleFile };
+  return { project_folder: folder, manifest, unsupported_reason: null, notes };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -429,7 +351,8 @@ function fakePython(summary: ProjectSummary): Manifest {
 
 /**
  * Write a project too big for the content budget: a large main.py whose
- * argparse setup and __main__ guard sit at the end, plus 40 helper modules.
+ * argparse setup (including a results folder option) and __main__ guard sit
+ * at the end, plus 40 helper modules.
  */
 async function writeBigProject(dir: string): Promise<string> {
   await mkdir(path.join(dir, "helpers"), { recursive: true });
@@ -439,6 +362,7 @@ async function writeBigProject(dir: string): Promise<string> {
     `import argparse\nfrom helpers import mod_0\n\n${filler}\n\ndef main():\n    parser = argparse.ArgumentParser()\n` +
       `    parser.add_argument("data", help="CSV file to summarise")\n` +
       `    parser.add_argument("--rows", type=int, choices=range(1, 1001), help="How many rows to show")\n` +
+      `    parser.add_argument("--output-dir", default="out", help="Folder for the summary")\n` +
       `    args = parser.parse_args()\n    print(args)\n\n\nif __name__ == "__main__":\n    main()\n`,
   );
   for (let i = 0; i < 40; i++) {
@@ -447,14 +371,14 @@ async function writeBigProject(dir: string): Promise<string> {
   return dir;
 }
 
-/** Write every file under `dir` into a deflate-compressed zip at `out`; paths are relative to `dir`. */
-async function zipDirectory(dir: string, out: string): Promise<string> {
+/** Write every file under `dir` into a deflate-compressed zip at `out`; paths are relative to `dir`, after `prefix` (e.g. "folder/"). */
+async function zipDirectory(dir: string, out: string, prefix = ""): Promise<string> {
   const entries: { name: string; data: Buffer }[] = [];
   async function walk(rel: string): Promise<void> {
     for (const entry of await readdir(path.join(dir, rel), { withFileTypes: true })) {
       const child = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory()) await walk(child);
-      else if (entry.isFile()) entries.push({ name: child, data: await readFile(path.join(dir, child)) });
+      else if (entry.isFile()) entries.push({ name: `${prefix}${child}`, data: await readFile(path.join(dir, child)) });
     }
   }
   await walk("");

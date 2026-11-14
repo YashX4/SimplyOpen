@@ -24,7 +24,7 @@
  *    path and size only, and the next (smaller) file is tried, so one large
  *    data file cannot crowd out a small main script ranked after it.
  * 4. Whenever anything was left out for size, `truncated` is `true` and
- *    `skippedFiles` lists it, so confidence scoring can account for it.
+ *    `skippedFiles` lists it, so the model can be told what it cannot see.
  * 5. For code files that were left out, "key lines" are still collected:
  *    entry-point guards, argument parsing, `input(`, game/GUI/server start-up,
  *    environment variables, subprocesses, network calls. A big project's

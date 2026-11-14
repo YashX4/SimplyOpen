@@ -28,17 +28,24 @@ import {
 import type { ProjectSummary } from "./types.js";
 
 /**
- * What the model is asked to submit: a plain-English name and description,
- * plus a manifest. Describes the request, not the (untrusted) response; see
- * {@link RawAnalysis}.
+ * What the model is asked to submit. Describes the request, not the
+ * (untrusted) response; see {@link RawAnalysis}.
+ *
+ * Exactly one of `manifest` and `unsupported_reason` is set.
  */
 export interface RequestedAnalysis {
-  /** A few plain words naming the project. */
-  name: string;
-  /** One to three plain-English sentences for people who have never coded. */
-  description: string;
-  /** The manifest for the project. */
-  manifest: Manifest;
+  /**
+   * The folder in the zip that is the project folder (where `simplyopen.json`
+   * goes, and what every manifest path is relative to): `""` for the zip's
+   * root, or e.g. `"image_resizer"` when the project was zipped as a folder.
+   */
+  project_folder: string;
+  /** The v0 manifest, or null when the project doesn't fit v0. */
+  manifest: Manifest | null;
+  /** Why the project doesn't fit v0, in plain English, or null when `manifest` is set. */
+  unsupported_reason: string | null;
+  /** One short plain-English sentence per guess or doubt; empty when there are none. */
+  notes: string[];
 }
 
 /**
@@ -48,7 +55,7 @@ export interface RequestedAnalysis {
  * expressed in a schema at all, and a reply can be cut off. Callers must
  * validate before trusting any of it.
  *
- * All three model fields are `undefined` when the model did not submit an
+ * All four model fields are `undefined` when the model did not submit an
  * answer (for example, its reply hit the output-token limit). The caller
  * treats that like any other invalid answer, and retries.
  */
@@ -93,11 +100,11 @@ export interface AnthropicClaudeClientOptions {
   timeoutMs?: number;
   /**
    * Use strict tool use (`strict: true`), which makes the API constrain the
-   * answer to the tool schema. Default `false`: with the full manifest schema
-   * (interfaces, servers, prompts, nullable fields) the API rejects strict
-   * mode with "The compiled grammar is too large". The answer is validated
-   * against `schema.json` and the contract rules, with one retry, either way;
-   * strict mode only makes a well-formed first attempt more likely.
+   * answer to the tool schema. Default `false`: the larger 1.0 manifest made
+   * the API reject strict mode ("The compiled grammar is too large"), and it
+   * hasn't been tried with v0 yet. The answer is validated against
+   * `schema.json` and the contract rules, with one retry, either way; strict
+   * mode only makes a well-formed first attempt more likely.
    */
   strictTool?: boolean;
 }
@@ -198,13 +205,19 @@ export class AnthropicClaudeClient implements ClaudeClient {
     );
     // A reply cut off at the token limit may hold a partial tool call; never use it.
     if (!call || response.stop_reason === "max_tokens") {
-      return { name: undefined, description: undefined, manifest: undefined, rawModelOutput };
+      return { project_folder: undefined, manifest: undefined, unsupported_reason: undefined, notes: undefined, rawModelOutput };
     }
 
     // The SDK parses tool input into an object; read fields without trusting them.
     const input: unknown = call.input;
     const record = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
-    return { name: record.name, description: record.description, manifest: record.manifest, rawModelOutput };
+    return {
+      project_folder: record.project_folder,
+      manifest: record.manifest,
+      unsupported_reason: record.unsupported_reason,
+      notes: record.notes,
+      rawModelOutput,
+    };
   }
 }
 
@@ -244,41 +257,45 @@ const UNSUPPORTED_KEYWORDS = new Set([
   "pattern", "minLength", "maxLength", "minItems", "maxItems",
 ]);
 
-/** Values the model may use for `Input.default` (the contract allows any JSON; scalars are what controls can show). */
-const DEFAULT_VALUE_SCHEMA: Json = {
-  anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }],
-};
-
 /**
- * Build the submit tool's input schema, `{ name, description, manifest }`,
- * with `manifest` derived from `src/manifest/schema.json` and adapted to
- * what strict tool use supports.
+ * Build the submit tool's input schema,
+ * `{ project_folder, manifest, unsupported_reason, notes }`, with `manifest`
+ * derived from `src/manifest/schema.json` and adapted to what strict tool use
+ * supports.
  *
  * @returns A new schema object on every call (safe for the caller to mutate).
  */
 export function buildSubmitToolInputSchema(): Anthropic.Beta.Messages.BetaTool.InputSchema {
   const source = manifestJsonSchema as unknown as { [key: string]: Json };
-  const definitions = (source.definitions ?? {}) as { [key: string]: Json };
-  const $defs: { [key: string]: Json } = {};
-  for (const [name, definition] of Object.entries(definitions)) $defs[name] = toStrictSchema(definition);
-
   return {
     type: "object",
     additionalProperties: false,
-    required: ["name", "description", "manifest"],
+    required: ["project_folder", "manifest", "unsupported_reason", "notes"],
     properties: {
-      name: { type: "string", description: "A few plain words naming the project." },
-      description: { type: "string", description: "One to three plain-English sentences for non-technical people." },
-      manifest: toStrictSchema(source),
+      project_folder: {
+        type: "string",
+        description: 'The folder in the zip that holds the project, relative to the zip root: "" for the root itself.',
+      },
+      manifest: {
+        description: "The SimplyOpen manifest, or null if the project doesn't fit it.",
+        anyOf: [toStrictSchema(source), { type: "null" }],
+      },
+      unsupported_reason: {
+        description: "Why the project doesn't fit the manifest, in plain English, or null when a manifest is given.",
+        anyOf: [{ type: "string" }, { type: "null" }],
+      },
+      notes: {
+        type: "array",
+        items: { type: "string" },
+        description: "One short plain-English sentence per guess or doubt; empty if none.",
+      },
     },
-    $defs,
   };
 }
 
 /**
  * Recursively adapt a schema node for strict tool use: drop unsupported
- * keywords, point `$ref`s at `$defs`, turn `type: [a, b]` into `anyOf`, and
- * give the untyped `default` a concrete type.
+ * keywords and turn `type: [a, b]` into `anyOf`.
  */
 function toStrictSchema(node: Json): Json {
   if (Array.isArray(node)) return node.map(toStrictSchema);
@@ -286,18 +303,11 @@ function toStrictSchema(node: Json): Json {
 
   const out: { [key: string]: Json } = {};
   for (const [key, value] of Object.entries(node)) {
-    if (UNSUPPORTED_KEYWORDS.has(key) || key === "definitions") continue;
-    if (key === "$ref" && typeof value === "string") {
-      out[key] = value.replace("#/definitions/", "#/$defs/");
-    } else if (key === "properties" && value !== null && typeof value === "object" && !Array.isArray(value)) {
+    if (UNSUPPORTED_KEYWORDS.has(key)) continue;
+    if (key === "properties" && value !== null && typeof value === "object" && !Array.isArray(value)) {
+      // Property NAMES are never keywords, so only their schemas are adapted.
       const props: { [key: string]: Json } = {};
-      for (const [prop, propSchema] of Object.entries(value)) {
-        const isUntyped =
-          propSchema !== null && typeof propSchema === "object" && !Array.isArray(propSchema) &&
-          !("type" in propSchema) && !("$ref" in propSchema) && !("anyOf" in propSchema) &&
-          !("enum" in propSchema) && !("const" in propSchema);
-        props[prop] = isUntyped ? { ...(propSchema as { [key: string]: Json }), ...(DEFAULT_VALUE_SCHEMA as object) } : toStrictSchema(propSchema);
-      }
+      for (const [prop, propSchema] of Object.entries(value)) props[prop] = toStrictSchema(propSchema);
       out[key] = props;
     } else {
       out[key] = toStrictSchema(value);

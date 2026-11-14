@@ -2,74 +2,60 @@
 
 Part of SimplyOpen, our HackUMass 2026 project: a place where people who don't code can share and use the tools they've made with AI help, without touching a terminal.
 
-The **Analyzer** takes an uploaded project zip and works out how to run it. Claude reads the project and the Analyzer returns:
+The **Analyzer** takes an uploaded project zip and works out how to run it. Claude reads the project, and the Analyzer returns either:
 
-- a **manifest**: a fixed-format JSON description of how to run the project (which file to start, what the person has to provide, what comes out, what it needs installed, what it can reach, and how sure the Analyzer is);
-- a plain-English **name** and **description** written for people who have never coded.
+- a **manifest** in the SimplyOpen **v0** format: the `simplyopen.json` the Runner reads (the app's name and description, which Python file to run, the controls to show, and the setting for where results are saved), plus the **project folder** in the zip it belongs in and any **notes** on what Claude had to guess; or
+- a plain-English **reason the project doesn't fit v0 yet** (for example, it's a game that opens its own window).
 
-The manifest is the only thing the Analyzer hands to the rest of SimplyOpen. Three other components are built against it in parallel:
+The manifest is the only thing the Analyzer hands to the rest of SimplyOpen:
 
 | Component | Uses the manifest to |
 |---|---|
-| **Runner** | draw a simple window (pick files, press Run, open results) and run the project on the person's computer |
-| **Factory** | build and smoke-test the Mac and Windows downloads |
-| **Web** | render the project page, including what the project can access |
+| **Runner** | draw a simple window (pick a file, type a value, pick from a list, press Run, open the results) and run the project on the person's computer |
+| **Factory** | build and smoke-test the Mac and Windows downloads (using `requirements` and `sample`) |
+| **Web** | render the project page |
 
-## Scope
+## Scope: what v0 can describe
 
-This Analyzer currently handles **one project kind: "app or tool"**: a script or small program meant to run on the person's own computer, in **any language it can detect signals for** (file extensions, shebang lines, and files like `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `Cargo.toml`).
+v0 is deliberately small. A project fits only if:
 
-It does **not** yet handle:
+- it is **Python**, with one `.py` file to run;
+- it **runs once and finishes**: takes its settings, does its job, exits;
+- it does **not** open its own window (games, desktop apps), ask questions while it runs, or start a web server;
+- its script has an option for **the folder to save results in** (for example `--output-dir`); the Runner makes a fresh folder for every run and passes it last;
+- every setting it needs is a **file**, **text**, a **number** or **one choice from a list**, passed as `--flag value` or as a bare value by position;
+- any libraries it needs beyond Python's own are listed in a **requirements file**.
 
-- web-page projects,
-- Claude artifacts,
-- prompt or skill projects,
-- static file or template uploads.
+Anything else is turned down with `UnsupportedProjectError` and a plain-English reason. On/off options that take no value (like `--verbose`) can't be shown, so they're left out, with a note.
 
-Those are out of scope until a future version of the manifest schema adds project kinds for them. Every manifest today has `"project_kind": "app_or_tool"`.
+The larger **1.0** format, which also covers other languages, games, interactive programs and local web apps, is saved for later in [`future/manifest-1.0/`](future/manifest-1.0/). Nothing uses it today.
 
 ## The abstraction rule
 
-The Analyzer's entire contract with the rest of the system is the manifest schema ([`src/manifest/schema.ts`](src/manifest/schema.ts), with its runtime twin [`src/manifest/schema.json`](src/manifest/schema.json)). This is non-negotiable:
+The Analyzer's entire contract with the rest of the system is the **shared v0 schema**: `manifest/manifest.schema.json` at the repository root, owned together with the Runner. [`src/manifest/schema.json`](src/manifest/schema.json) is an exact copy (a test fails if they differ once both are on the same branch), and [`src/manifest/schema.ts`](src/manifest/schema.ts) has the matching TypeScript types and every extra rule the Analyzer checks.
 
-- The Analyzer module MUST NOT import, call, or reference anything that belongs to the Runner, Factory, or Web. It has no knowledge of Electron, bundled Python runtimes, GitHub Actions, or any specific OS packaging mechanism — those are downstream concerns.
-- The only valid output of this service is: an HTTP response (or, at the module level, a typed object) containing a manifest conforming to the schema, plus a name and description string. Nothing else leaves this component.
-- If the manifest needs a new field, add it to the schema definition itself, with a comment explaining why — never bolt on an undocumented field to satisfy a "wouldn't it be convenient" instinct.
-- Treat the manifest type as a versioned public interface, since Runner, Factory, and Web are being coded against it concurrently. A hidden assumption here breaks three other people's work silently.
+- The Analyzer module MUST NOT import, call, or reference anything that belongs to the Runner, Factory, or Web. It only produces the manifest they read.
+- Nothing else leaves this component: an HTTP response (or, at the module level, a typed object) with a manifest that passed validation, its project folder, and notes.
+- Changing the manifest means changing the shared schema, and the Runner with it. Don't add fields on the Analyzer side only.
 
 How this repo keeps to it:
 
 - Source files under `src/analyzer/` and `src/manifest/` import only Node built-ins, the Anthropic SDK (`@anthropic-ai/sdk`), and each other. Even JSON Schema validation is built in rather than taken from a library. (The test file additionally uses Vitest.)
 - `src/manifest/schema.ts` imports nothing, so anyone can read the contract on its own.
-- The HTTP response contains only `manifest`, `name` and `description`. The model's raw reply (`rawModelOutput`) is written to the server log for debugging and never sent downstream.
+- The model's raw reply (`rawModelOutput`) is written to the server log for debugging and never sent downstream.
 
 ## How it works
 
 1. **Unzip** the upload into a fresh temp folder that belongs to that request only. Unsafe or broken archives are rejected: paths that escape the folder, symlinks, encryption, ZIP64, zip bombs, archives or files over 50 MB, more than 200 MB unpacked in total.
-2. **Choose what Claude sees** (`projectSummary.ts`). Manifest and config files are always included in full. Images, archives, compiled files and folders like `node_modules` or `.git` are left out. Everything else is ranked (near the project root, names like `main`/`index`/`app`/`run`/`cli`, and README first) and included in full until a budget of about 12,000 tokens is used up. Files that don't fit are listed by name and size only, and the summary records exactly what was left out. For big projects, **key lines** are still pulled from code that didn't fit (entry-point guards, argument parsing, `input(` prompts, game/window/server start-up, environment variables, subprocesses, network calls), so the project's shape stays visible. **Asset files** (images, sounds, fonts, video) are listed by name only, never read.
-3. **Ask Claude** (`claudeClient.ts`, prompts in `prompts.ts`). The prompt tells Claude not to assume any language, to list every plausible entry point and pick the primary one, and to lower confidence whenever it's unsure. When files were left out, the prompt names them.
-4. **Check the answer** (`analyzer.ts`). The manifest is validated against `schema.json`, plus the consistency rules the schema can't express (listed in `schema.ts`): unique ids, a primary that matches a real entry point, entry-point paths and script files in `run_command` that exist, sensible placeholders and bindings, and paths that stay inside the project. The name must be short, and the description must avoid technical words.
-5. **Retry once if the answer is invalid**, with the list of problems added to the prompt. If the second answer is also invalid, the Analyzer fails with `AnalysisFailedError`. It never returns a manifest that didn't pass validation.
+2. **Choose what Claude sees** (`projectSummary.ts`). Manifest and config files are always included in full. Images, archives, compiled files and folders like `node_modules` or `.git` are left out. Everything else is ranked (near the project root, names like `main`/`index`/`app`/`run`/`cli`, and README first) and included in full until a budget of about 12,000 tokens is used up. Files that don't fit are listed by name and size only, and the summary records exactly what was left out. For big projects, **key lines** are still pulled from code that didn't fit (entry-point guards, argument parsing, `input(` prompts, game/window/server start-up, environment variables, subprocesses, network calls). **Asset files** (images, sounds, fonts, video) are listed by name only, never read, so a sample file for `sample` can still be found.
+3. **Ask Claude** (`claudeClient.ts`, prompts in `prompts.ts`). The prompt explains exactly how the Runner runs a project, asks Claude to decide first whether the project fits v0, and then either fill in the manifest or give the reason it doesn't fit. When files were left out, the prompt names them.
+4. **Check the answer** (`analyzer.ts`). The manifest is validated against `schema.json`, plus the rules the schema can't express (listed in `schema.ts`): `entry`, `requirements` and sample files exist in the project folder; flags look like `--name` and are never used twice; positional inputs are required; defaults and samples are valid for their input; the name is short and the description avoids technical words.
+5. **Retry once if the answer is invalid**, with the list of problems added to the prompt. If the second answer is also invalid, the Analyzer fails with `AnalysisFailedError`. It never returns a manifest that didn't pass validation. A clear "doesn't fit" answer is not retried.
 6. **Clean up** the temp folder, whatever happened.
 
-The confidence field (`confidence.overall`: `high`, `medium` or `low`, plus plain-English `notes`) is how the Analyzer says "don't trust my details here". When it isn't `high`, the Runner should use its generic pick-files-and-run window instead of the specific one the manifest describes.
+### The project folder
 
-## What the manifest can describe
-
-Each entry point has an **`interface`** telling the Runner how to present the running program:
-
-| `interface.kind` | Examples | What the manifest adds for the Runner |
-|---|---|---|
-| `command_line` | converters, cleaners, report generators | runs, shows progress, finishes on its own |
-| `own_window` | PyGame/arcade games, Tkinter/Qt/Electron apps | `controls` (e.g. "Move left: Left arrow, A") for a how-to-play card; runs until closed |
-| `interactive_terminal` | quizzes, menus, programs using `input()` | `prompts`: the questions it asks, in order, with answer type and choices |
-| `local_server` | Flask, FastAPI, Streamlit, Gradio, Express | `server`: default port, how to set it (`port_binding`, rendered into `{port}`), path to open, and the "ready" text to wait for |
-
-Inputs can be files (one or `multiple`), folders, text, numbers (with `min`/`max`), choices or on/off switches, each with plain-English `help`. Values reach the program through `cli_binding` (command line) or `env_binding` (an environment variable, e.g. an API key marked `secret` so it's masked). Outputs can be files, folders, or `console` text. The project also lists runtime `assets` (sprites, sounds, levels), an optional `build_command`, system tools (e.g. `ffmpeg`), supported operating systems, and whether it starts other programs.
-
-Each entry point also has a **`working_directory`**: the folder to start it from. When a project was zipped as a folder (e.g. `star-game/`), the entry point is `star-game/main.py` but it runs from `star-game` as `python main.py`, so files it opens relative to itself (sprites, data) are found. Archive paths (`path`, `working_directory`, `assets`) are relative to the zip root; file names inside `run_command` are relative to `working_directory`.
-
-Everything is in [`src/manifest/schema.ts`](src/manifest/schema.ts), including the exact rendering rules and the full list of consistency rules every manifest is checked against (for example: files named in `run_command` exist from `working_directory`, inputs with a `cli_binding` need `{args}`, servers with a `port_binding` need `{port}`, every `env_binding` appears in `reads_env_vars`).
+The Runner starts `python <entry>` from the folder that holds `simplyopen.json`, and every path in the manifest is relative to it. People often zip a project as one folder, so the Analyzer reports which folder that is as `projectFolder`: `""` for the zip's root, or e.g. `"image_resizer"`. Whatever packages the project (the Factory) should put `simplyopen.json`, and the project's files, there.
 
 ## Running it
 
@@ -119,20 +105,26 @@ Environment variables:
 curl -F "file=@my-project.zip" http://127.0.0.1:3000/analyze
 ```
 
-To try a real project, use one of the zips in `examples/`:
+On success (`200`) it returns:
 
-```bash
-curl -F "file=@examples/raycaster-starter-project.zip" http://127.0.0.1:3000/analyze
+```json
+{
+  "manifest": { "manifest_version": 0, "name": "Image Resizer", "entry": "resize.py", "…": "…" },
+  "name": "Image Resizer",
+  "description": "Make a picture smaller or larger without stretching it.",
+  "projectFolder": "",
+  "notes": []
+}
 ```
 
-On success (`200`) it returns `{ "manifest": { … }, "name": "…", "description": "…" }`. Errors return `{ "error": { "code", "message" } }`:
+`name` and `description` repeat the manifest's own fields, for convenience. Errors return `{ "error": { "code", "message" } }`:
 
 | Status | When |
 |---|---|
 | `400` | No file, or more than one file |
 | `413` | Upload larger than `MAX_UPLOAD_BYTES` |
 | `415` | Not a multipart request |
-| `422` | The zip can't be read safely (`UnzipError`), or a manifest fails validation (`SchemaValidationError`) |
+| `422` | The zip can't be read safely (`UnzipError`), a manifest fails validation (`SchemaValidationError`), or the project doesn't fit v0 (`UnsupportedProjectError`, whose message is the plain-English reason, safe to show the uploader) |
 | `502` | Claude failed, timed out, declined, or answered invalidly twice (`ClaudeApiError`, `AnalysisFailedError`) |
 | `500` | Anything else |
 
@@ -141,10 +133,10 @@ On success (`200`) it returns `{ "manifest": { … }, "name": "…", "descriptio
 ```ts
 import { analyzeZip } from "./src/analyzer/analyzer.js";
 
-const { manifest, name, description } = await analyzeZip("project.zip");
+const { manifest, projectFolder, notes } = await analyzeZip("project.zip");
 ```
 
-`analyzeZip(zipPath, client?, options?)` accepts an optional `ClaudeClient` (pass a fake in tests) and `{ signal, tmpRoot }` for cancellation and the temp-folder location. It's safe to call many times at once.
+`analyzeZip(zipPath, client?, options?)` accepts an optional `ClaudeClient` (pass a fake in tests) and `{ signal, tmpRoot }` for cancellation and the temp-folder location. It's safe to call many times at once. `manifestIssues(manifest, projectFiles, projectFolder)` runs the same checks on any manifest, for example a hand-written one.
 
 ## Testing
 
@@ -158,15 +150,14 @@ npm run typecheck
 
 `npm test` runs the Vitest suite in [`src/analyzer/analyzer.test.ts`](src/analyzer/analyzer.test.ts) against the fixtures in [`testdata/`](testdata/). Claude is mocked, so tests make no network calls and need no API key. The mock answers only from the files the Analyzer chose to show it, so the tests check the Analyzer's own job:
 
-- **`transcript-python/`**: a single Python script that converts Zoom transcripts for NVivo. Expects Python, one primary entry point, and a required transcript-file input.
-- **`node-cli/`**: a small Node project with a `package.json` `main` field and two scripts. Expects Node, several entry points, and the primary matching `main`.
-- **`ambiguous-multi-entry/`**: two equally plausible Python scripts and nothing to say which is the main one. Expects confidence below `high`, with a note explaining why.
-- **`pygame-game/`**: a PyGame game with sprites and a sound. Expects an `own_window` interface that runs until closed, its keyboard controls, `assets/**`, and the `pygame` package; checks the asset files were named but never read.
-- **`interactive-quiz/`**: a program that asks questions with `input()`. Expects an `interactive_terminal` interface listing the questions in order, with their answer types.
-- **`wrapped-folder/`**: a small game zipped as a folder (`star-game/`). Expects `working_directory: "star-game"` and `run_command: "python main.py {args}"`, and checks that a command written relative to the wrong folder is rejected with the fix suggested.
-- **Big project** (generated at test time): a `main.py` too large for the budget, plus 40 modules. Checks that `main.py`'s key lines (its `__main__` guard and argparse calls) still reach the model, and that confidence drops with a note.
-- **Contract rules**: each rule JSON Schema can't express (placeholders, bindings, `server`/`prompts` consistency, number limits, choice defaults, output paths), broken once, must be rejected and explained on the retry.
-- **Retry**: an invalid answer followed by a valid one, on every fixture.
+- **The contract**: the Runner's hand-written example manifest ([`testdata/expected/image-resizer.simplyopen.json`](testdata/expected/image-resizer.simplyopen.json)) passes every check, and `src/manifest/schema.json` is identical to the shared schema (skipped on a branch that doesn't have the shared file yet).
+- **`image-resizer/`**: the Runner's own example project. The result must match the Runner's hand-written manifest: entry, requirements, the three controls with their flags and defaults, the results flag, and the sample photo.
+- **Wrapped resizer** (zipped at test time as the folder `image_resizer/`): expects `projectFolder: "image_resizer"` with paths relative to it, and checks that paths written relative to the zip root instead are rejected with the fix suggested.
+- **`transcript-python/`**: a Zoom-to-NVivo converter. Expects a positional file input, `--output-dir` as the results flag, and its on/off option left out with a note.
+- **Big project** (generated at test time): a `main.py` too large for the budget, plus 40 modules. Checks that its key lines (the `__main__` guard and argparse calls) still reach the model, and that the notes say the view was partial.
+- **Projects that don't fit v0** (`node-cli/`, `pygame-game/`, `interactive-quiz/`, `ambiguous-multi-entry/`, `wrapped-folder/`): each is turned down with `UnsupportedProjectError` and a reason, with no retry.
+- **Rules**: each rule (schema patterns, missing files, flags, positional inputs, defaults, samples, wording, the answer's shape), broken once, must be rejected and explained on the retry.
+- **Retry**: an invalid answer followed by a valid one, on every fixture that fits.
 - **Concurrency**: five simultaneous analyses mixing two fixtures, checking that nothing leaks between them and no temp folders are left behind.
 
 These tests do **not** measure the real model's judgment. That needs a live run against the same fixtures.
@@ -176,8 +167,8 @@ These tests do **not** measure the real model's judgment. That needs a live run 
 ```
 src/
   manifest/
-    schema.ts          The shared contract (TypeScript types). Imports nothing.
-    schema.json        The same contract as JSON Schema, used to validate answers.
+    schema.ts          The v0 contract as TypeScript types, plus the extra rules. Imports nothing.
+    schema.json        Exact copy of the shared manifest/manifest.schema.json, used to validate answers.
   analyzer/
     analyzer.ts        analyzeZip(): unzip → summarize → ask Claude → validate → retry once.
     analyzer.test.ts   Vitest suite (Claude mocked).
@@ -187,17 +178,18 @@ src/
     types.ts           ProjectSummary and related shared types.
     errors.ts          AnalyzerError and its subclasses.
   server.ts            HTTP server (Fastify): POST /analyze. HTTP plumbing only.
-testdata/              Fixture projects used by the tests.
+testdata/              Fixture projects used by the tests, plus expected manifests.
 examples/              Real project zips to try by hand with curl (not used by the tests).
+future/manifest-1.0/   The larger manifest format, saved for later (not used).
 ```
 
 All paths above are inside the `analyzer/` folder.
 
 ## Known limitations
 
-- **Not yet run against the live Claude API.** Everything above is tested with Claude mocked. The first real runs may surface issues (for example, the API rejecting the tool schema, or answers that are slightly off and keep getting rejected).
-- **Confidence comes from the model.** No code-level checks lower it yet when the doubt is obvious (files left out, an input with no `cli_binding`, several runnable scripts).
-- **Capabilities are taken from the model's reading of the code**, not cross-checked.
-- **Alternate entry points have no inputs of their own.** `inputs` describe the primary entry point only.
-- **Interactive programs whose questions branch** on earlier answers can only list the first questions in `prompts`.
+- **v0 turns down many projects**: anything not in Python, games and other windowed apps, programs that ask questions while they run, local web apps, and scripts with no results-folder option.
+- **Several files at once, folders and on/off switches can't be shown.** A setting that takes several files lets the person pick one; on/off options are left out.
+- **A project with libraries but no requirements file is turned down**, because the Runner can't install what isn't listed.
+- **`sample` is only given when the project ships a usable sample file.**
+- **Whether a project fits is the model's call.** The code checks every manifest it returns, but it can't check a "doesn't fit" answer.
 - **The server has no authentication or rate limiting**, and every request makes a paid Claude call. Don't expose it publicly as is.
