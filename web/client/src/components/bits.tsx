@@ -101,11 +101,16 @@ export function Header({ current }: { current?: NavName }) {
   const ink = (name: NavName) => (name === current ? { color: '#091717' } : undefined)
   return (
     <header className="wrap topbar" style={s('position:relative;z-index:5;display:flex;align-items:center;flex-wrap:wrap;gap:8px 28px;padding-top:24px;padding-bottom:24px')}>
-      <Link to="/" aria-label="Home" style={s('display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;color:#091717')}>
-        <svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <Link to="/" aria-label="SimplyOpen, home" className="brand"
+        style={s('display:inline-flex;align-items:center;gap:8px;height:44px;margin-right:12px;color:#091717;text-decoration:none')}>
+        <svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ flex: 'none' }}>
           <circle cx="16" cy="16" r="10" />
           <circle cx="24.5" cy="9" r="2.4" fill="currentColor" stroke="none" />
         </svg>
+        <span className="canon" aria-hidden="true"
+          style={s("font-size:27px;line-height:1;letter-spacing:-0.01em;font-variation-settings:'opsz' 30,'wdth' 80,'wght' 400")}>
+          SimplyOpen
+        </span>
       </Link>
       <Link className="nav" to="/" style={ink('Browse')}>Browse</Link>
       <Link className="nav" to="/publish" style={ink('Publish')}>Publish</Link>
@@ -115,7 +120,8 @@ export function Header({ current }: { current?: NavName }) {
           <span className="badge" aria-label={`${waiting} suggestions waiting`}>{waiting}</span>
         ) : null}
       </Link>
-      <div style={{ flex: 1 }} />
+      <div className="tb-push" style={{ flex: 1 }} />
+      <span className="tb-break" aria-hidden="true" />
       {me ? (
         <Link className="nav who" to="/my-things" style={{ color: '#091717' }}>
           <Avatar name={displayName(me)} size={30} />

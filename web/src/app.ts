@@ -10,6 +10,8 @@
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify'
 import multipart from '@fastify/multipart'
+import fastifyStatic from '@fastify/static'
+import { sep } from 'node:path'
 import type { Db } from './db.js'
 import * as users from './repo/users.js'
 import type { Analyzer } from './services/analyzer.js'
@@ -51,6 +53,12 @@ export interface AppDeps {
   showSignInLinks?: boolean
   maxUploadBytes?: number
   logger?: boolean
+  /**
+   * The built website (client/dist). When set, this one server is the whole
+   * site: the pages, their files, and the API under /api. Any other address
+   * gets the page shell, so links into the site open the right page.
+   */
+  siteDir?: string
 }
 
 declare module 'fastify' {
@@ -124,9 +132,25 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerMe(app, deps)
   await registerChat(app, deps)
 
-  app.setNotFoundHandler((request, reply) =>
-    fail(reply, 404, 'NOT_FOUND', 'There is nothing at that address.'),
-  )
+  if (deps.siteDir) {
+    await app.register(fastifyStatic, {
+      root: deps.siteDir,
+      cacheControl: false,
+      // The built files have their contents in their names, so they can be
+      // kept forever. The page shell must always be asked for again.
+      setHeaders: (res, file) => {
+        res.setHeader('cache-control', file.includes(`${sep}assets${sep}`)
+          ? 'public, max-age=31536000, immutable' : 'no-cache')
+      },
+    })
+  }
+
+  app.setNotFoundHandler((request, reply) => {
+    if (deps.siteDir && (request.method === 'GET' || request.method === 'HEAD') && !request.url.startsWith('/api/')) {
+      return reply.header('cache-control', 'no-cache').sendFile('index.html')
+    }
+    return fail(reply, 404, 'NOT_FOUND', 'There is nothing at that address.')
+  })
   app.setErrorHandler((error, request, reply) => {
     request.log.error({ err: error }, 'unexpected error')
     const code = (error as { code?: string }).code

@@ -7,7 +7,8 @@
  * builds never start. So `npm run dev` works on a laptop with nothing set up.
  */
 
-import { pathToFileURL } from 'node:url'
+import { existsSync } from 'node:fs'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { buildApp } from './app.js'
 import { connect, connectInMemory, type Db } from './db.js'
 import { migrate } from './migrate.js'
@@ -76,12 +77,35 @@ async function main(): Promise<void> {
       env.NODE_ENV !== 'production' &&
       /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(env.SITE_URL ?? 'http://localhost:5173'),
     logger: true,
+    // In production this server is the whole site. On a laptop Vite serves
+    // the pages instead, so the built copy is left alone there.
+    siteDir: siteDir(env),
   })
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => void app.close().then(() => db.close()).then(() => process.exit(0)))
   }
-  await app.listen({ port: Number(env.PORT ?? 3200), host: env.HOST ?? '127.0.0.1' })
+  // Hosted, it must answer from outside the machine, and over IPv6 too, which
+  // is how services on the same host reach each other.
+  // A machine without IPv6 refuses that, so fall back to every IPv4 address.
+  const port = Number(env.PORT ?? 3200)
+  const host = env.HOST ?? (env.NODE_ENV === 'production' ? '::' : '127.0.0.1')
+  try {
+    await app.listen({ port, host })
+  } catch (error) {
+    if (env.HOST || host !== '::' || (error as { code?: string }).code !== 'EAFNOSUPPORT') throw error
+    await app.listen({ port, host: '0.0.0.0' })
+  }
+}
+
+/** The built website, when this is production and it has been built. */
+function siteDir(env: NodeJS.ProcessEnv): string | undefined {
+  if (env.SITE_DIR) return env.SITE_DIR
+  if (env.NODE_ENV !== 'production') return undefined
+  const built = fileURLToPath(new URL('../client/dist', import.meta.url))
+  if (existsSync(`${built}/index.html`)) return built
+  console.warn('The website is not built, so only the API is served. Run npm run build:all.')
+  return undefined
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

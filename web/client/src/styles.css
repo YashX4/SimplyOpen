@@ -210,3 +210,16 @@ background:rgba(251,250,244,0.82);-webkit-backdrop-filter:blur(18px) saturate(1.
   .panel{background:#fff;box-shadow:inset 0 0 0 1px rgba(9,23,23,0.46)}
   .chip,.pill,.ghost,.inp,.wdrop,.drop{border-color:#091717}
 }
+
+/* On a phone the name and Sign in share the first line, the links the second. */
+.tb-break{display:none}
+@media (max-width:600px){
+  .topbar>.tb-push{display:none}
+  .topbar>.who,.topbar>.btn{order:1;margin-left:auto}
+  .topbar>.tb-break{display:block;order:2;flex-basis:100%;height:0}
+  .topbar>.nav:not(.who){order:3}
+  .topbar .brand .canon{font-size:24px!important}
+  .topbar>.btn{height:42px;padding:0 20px;font-size:16px}
+  .topbar .brand{margin-right:0!important}
+}
+@media (max-width:400px){.topbar .brand .canon{font-size:22px!important}}
