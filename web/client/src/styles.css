@@ -19,7 +19,7 @@ body{margin:0;background:#FBFAF4}
 .canon{font-family:'GT Canon','Fraunces',Georgia,'Times New Roman',serif;font-weight:300;font-variation-settings:'opsz' 60,'wdth' 75,'wght' 300}
 .mono{font-family:'GT Standard Mono','IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:400;font-size:16px;letter-spacing:-0.025em;text-transform:uppercase}
 a{color:#091717}
-a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid #2f6f6a;outline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:has(input[type=radio]:focus-visible),label:has(input[type=checkbox]:focus-visible){outline:2px solid #2f6f6a;outline-offset:3px}
 .wrap{width:100%;box-sizing:border-box;padding-left:clamp(24px,5vw,64px);padding-right:clamp(24px,5vw,64px)}
 .col{width:100%;max-width:880px;margin:0 auto}
 .panel{position:relative;isolation:isolate;border-radius:24px;background:linear-gradient(90deg,#c7d5d8 0%,#eff0ea 9%,#ecece4 28%,#e8e8e0 50%,#e2e2d6 72%,#ccd6d0 94%,#c5d0ca 100%);
