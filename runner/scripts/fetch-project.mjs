@@ -13,10 +13,10 @@
 //   sample inputs    Optional known-good answers for the test run
 //                    (saved as simplyopen.sample.json).
 
-import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { unzip } from './unzip.mjs'
 
 const runnerDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const uploadDir = join(runnerDir, 'resources', 'upload')
@@ -49,13 +49,15 @@ console.log('Fetching the project...')
 const zipPath = join(runnerDir, 'resources', 'upload.zip')
 writeFileSync(zipPath, await read(zipSource))
 
-// Windows has no unzip command, but its tar can open zips.
-const unpack =
-  process.platform === 'win32'
-    ? [join(process.env.SystemRoot, 'System32', 'tar.exe'), ['-xf', zipPath, '-C', uploadDir]]
-    : ['unzip', ['-q', zipPath, '-d', uploadDir]]
-if (spawnSync(unpack[0], unpack[1], { stdio: 'inherit' }).status !== 0) {
-  stop('The project zip could not be unpacked.')
+// Unpacked by Node itself, the same way on every system. The systems' own
+// tools disagree about unusual file names; see unzip.mjs.
+try {
+  const { written, skipped } = unzip(zipPath, uploadDir)
+  console.log(`Unpacked ${written} files.`)
+  for (const s of skipped) console.log(`Left out: ${s}`)
+  if (written === 0) stop('The project zip has no files in it.')
+} catch (error) {
+  stop(`The project zip could not be unpacked: ${error.message}`)
 }
 rmSync(zipPath)
 
