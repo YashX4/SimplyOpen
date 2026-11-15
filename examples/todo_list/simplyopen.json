@@ -1,0 +1,82 @@
+{
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "javascript",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "todo_app",
+          "path": "App.jsx",
+          "working_directory": "",
+          "run_command": null,
+          "description": "Shows a to-do list page where tasks can be added and deleted",
+          "interface": {
+            "kind": "local_server",
+            "exits_on_its_own": false,
+            "controls": [
+              {
+                "action": "Add a task",
+                "keys": [
+                  "Mouse click on the plus button"
+                ]
+              },
+              {
+                "action": "Delete a task",
+                "keys": [
+                  "Mouse click on the trash button"
+                ]
+              }
+            ],
+            "prompts": [],
+            "server": {
+              "port": null,
+              "port_binding": null,
+              "url_path": "/",
+              "ready_text": null
+            }
+          }
+        }
+      ],
+      "primary_entry_point": "todo_app",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [],
+    "outputs": [],
+    "dependencies": {
+      "runtime": [
+        "node>=18"
+      ],
+      "packages": [
+        "react",
+        "react-dom",
+        "lucide-react",
+        "tailwindcss"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "none",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "The project is a single React component (like a Claude artifact), not a standalone program, so there is no way to run it as uploaded.",
+        "There is no package.json, HTML page, or build setup, so it would need a React project such as Vite wrapped around it to start.",
+        "The styling relies on Tailwind CSS classes, which also need to be set up for it to look right."
+      ]
+    }
+  },
+  "name": "Simple To-Do List",
+  "description": "A small to-do list where you type tasks, add them to a list, and remove them when done. Tasks are not saved after you close it."
+}

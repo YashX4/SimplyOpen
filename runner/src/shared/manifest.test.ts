@@ -6,6 +6,7 @@ import {
   buildCommand,
   checkValues,
   initialValues,
+  pagePath,
   resultsFolder,
   unsupportedReason,
   type Input,
@@ -64,6 +65,30 @@ test('projects outside what the Runner can run are turned away with a reason', (
   expect(
     unsupportedReason(changed((m) => (m.project.entry_points[0].run_command = './run.sh {args}'))),
   ).toMatch(/not supported yet/)
+})
+
+test('web pages and React components are shown as pages instead of being run', () => {
+  // What the Analyzer writes for a pasted web page: no language we run, no command.
+  const webPage = changed((m) => {
+    m.project.language = 'html'
+    m.project.entry_points[0].path = 'index.html'
+    m.project.entry_points[0].run_command = null
+    m.project.entry_points[0].interface.kind = 'own_window'
+  })
+  expect(pagePath(webPage)).toBe('index.html')
+  expect(unsupportedReason(webPage)).toBeNull()
+
+  // A React component is built into a page by the Factory, at a fixed place.
+  const component = changed((m) => {
+    m.project.language = 'javascript'
+    m.project.entry_points[0].path = 'App.jsx'
+    m.project.entry_points[0].run_command = null
+  })
+  expect(pagePath(component)).toBe('simplyopen-page/index.html')
+  expect(unsupportedReason(component)).toBeNull()
+
+  // A Python project is not a page.
+  expect(pagePath(manifest)).toBeNull()
 })
 
 test('the form starts with the manifest defaults', () => {

@@ -2,18 +2,20 @@
 // to read files and launch programs. The page asks it to do things through the
 // handlers registered at the bottom of this file.
 
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from 'electron'
 import { spawn, spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { createInterface } from 'node:readline'
+import { pathToFileURL } from 'node:url'
 import Ajv from 'ajv'
 import manifestSchema from '../../../analyzer/src/manifest/schema.json'
 import type { ChooseFilesOptions, LoadResult, RunResult } from '../shared/api'
 import {
   buildCommand,
   checkValues,
+  pagePath,
   primaryEntryPoint,
   resultsFolder,
   unsupportedReason,
@@ -57,6 +59,15 @@ const validateManifest = new Ajv({ strict: false }).compile(manifestSchema)
 const workingDirFor = (m: Manifest): string =>
   join(projectDir, primaryEntryPoint(m)?.working_directory ?? '')
 
+// A project that is a web page is shown from this made-up address instead of
+// straight from its file. That makes it behave like a normal website (scripts
+// and saved settings work as their authors expect) while only ever being able
+// to read files inside the project's own folder.
+const PAGE_SCHEME = 'app'
+protocol.registerSchemesAsPrivileged([
+  { scheme: PAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+])
+
 let manifest: Manifest | null = null
 let lastResultsDir: string | null = null
 let running = false
@@ -98,6 +109,13 @@ function loadApp(): LoadResult {
   const loaded = parsed.manifest as Manifest
   const unsupported = unsupportedReason(loaded)
   if (unsupported) return { ok: false, error: unsupported }
+
+  // A page has to be there to be shown. For a React component, the Factory
+  // builds it; if that step was skipped there is nothing to open.
+  const page = pagePath(loaded)
+  if (page !== null && !existsSync(join(projectDir, page))) {
+    return { ok: false, error: "This app's page is missing, so there is nothing to show." }
+  }
 
   manifest = loaded
   return { ok: true, app: { manifest: loaded, name: parsed.name, description: parsed.description } }
@@ -179,6 +197,15 @@ async function smokeTest(): Promise<boolean> {
   if (!loaded.ok) return fail(loaded.error)
   const tested = loaded.app.manifest
 
+  // A page has nothing to run: the test is that it opens and shows something.
+  const page = pagePath(tested)
+  if (page !== null) {
+    const problem = await pageProblem(createPageWindow(loaded.app.name, page, false))
+    if (problem) return fail(problem)
+    console.log('SMOKE TEST PASSED (the page opened and showed its content)')
+    return true
+  }
+
   if (spawnSync(pythonPath, ['--version']).status !== 0) {
     return fail(`The app's Python could not be started (${pythonPath}).`)
   }
@@ -226,13 +253,95 @@ async function smokeTest(): Promise<boolean> {
   return true
 }
 
+/** Lets the project's page, and nothing else, be read through the made-up address. */
+function servePages(): void {
+  protocol.handle(PAGE_SCHEME, (request) => {
+    const path = decodeURIComponent(new URL(request.url).pathname).replace(/^\/+/, '')
+    const file = resolve(projectDir, path)
+    // Refuse anything that points outside the project's folder.
+    if (!file.startsWith(projectDir + sep)) return new Response('Not found', { status: 404 })
+    return net.fetch(pathToFileURL(file).toString())
+  })
+}
+
+/**
+ * The window for a project that is a web page. The page is somebody else's
+ * code, so it gets none of the Runner's abilities: it cannot read files,
+ * start programs, or use the camera or microphone. Links to other websites
+ * open in the user's own browser instead of inside the app.
+ */
+function createPageWindow(name: string, page: string, show = true): BrowserWindow {
+  const window = new BrowserWindow({
+    width: 1000,
+    height: 760,
+    title: name,
+    show,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+  })
+  const stayInside = (url: string): boolean => url.startsWith(`${PAGE_SCHEME}://`)
+  const openOutside = (url: string): void => {
+    if (/^https?:\/\//.test(url)) void shell.openExternal(url)
+  }
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    openOutside(url)
+    return { action: 'deny' }
+  })
+  window.webContents.on('will-navigate', (event, url) => {
+    if (stayInside(url)) return
+    event.preventDefault()
+    openOutside(url)
+  })
+  window.webContents.session.setPermissionRequestHandler((_contents, _permission, decide) =>
+    decide(false),
+  )
+  // Keep the app's name in the title bar, whatever the page calls itself.
+  window.on('page-title-updated', (event) => event.preventDefault())
+
+  const address = page.split('/').map(encodeURIComponent).join('/')
+  void window.loadURL(`${PAGE_SCHEME}://project/${address}`)
+  return window
+}
+
+/**
+ * Opens a page window and watches it for a few seconds. Returns what went
+ * wrong in plain words, or null if the page loaded, did not crash, and put
+ * something on the screen.
+ */
+function pageProblem(window: BrowserWindow): Promise<string | null> {
+  return new Promise((done) => {
+    const contents = window.webContents
+    let crash: string | null = null
+    // An error nothing caught is how a broken page announces itself.
+    contents.on('console-message', (event: unknown, _level?: unknown, text?: unknown) => {
+      const message = typeof text === 'string' ? text : String((event as { message?: string }).message ?? '')
+      console.log(`[page] ${message}`)
+      if (/^Uncaught/.test(message) && crash === null) crash = message
+    })
+    contents.on('did-fail-load', (_event, _code, description, _url, isMainFrame) => {
+      if (isMainFrame) done(`The page could not be opened (${description}).`)
+    })
+    contents.on('render-process-gone', () => done('The page crashed while opening.'))
+    contents.once('did-finish-load', () => {
+      // Give the page a moment to draw itself and to fail if it is going to.
+      setTimeout(async () => {
+        if (crash !== null) return done(`The page hit an error while opening: ${crash}`)
+        const hasContent: boolean = await contents.executeJavaScript(
+          `Boolean(document.body && (document.body.innerText.trim().length > 0 ||
+             document.body.querySelector('canvas, svg, img, input, button, video')))`,
+        )
+        done(hasContent ? null : 'The page opened but showed nothing.')
+      }, 3000)
+    })
+  })
+}
+
 /**
  * The picture mode, used by the Factory to show what this project's window
  * looks like. Started with `--screenshot=<file>`, the app opens its normal
  * window, waits for the form to be drawn, saves a picture of it as a PNG, and
  * quits. Nothing is run.
  */
-async function takeScreenshot(window: BrowserWindow, file: string): Promise<boolean> {
+async function takeScreenshot(window: BrowserWindow, file: string, isPage = false): Promise<boolean> {
   try {
     if (window.webContents.isLoading()) {
       await new Promise<void>((loaded) => window.webContents.once('did-finish-load', () => loaded()))
@@ -243,7 +352,10 @@ async function takeScreenshot(window: BrowserWindow, file: string): Promise<bool
       new Promise((done) => {
         const started = Date.now()
         const check = () => {
-          if (document.querySelector('h1') || Date.now() - started > 10000) {
+          // The Runner's own form shows a heading when it is ready. A project's
+          // page has no such signal, so it is simply given a moment to draw.
+          const ready = ${isPage} ? Date.now() - started > 2000 : document.querySelector('h1')
+          if (ready || Date.now() - started > 10000) {
             requestAnimationFrame(() => done(document.documentElement.scrollHeight))
           } else {
             setTimeout(check, 100)
@@ -287,6 +399,7 @@ function createWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   prepareProject()
+  servePages()
 
   if (process.argv.includes('--smoke-test')) {
     smokeTest().then((passed) => app.exit(passed ? 0 : 1))
@@ -318,13 +431,18 @@ app.whenReady().then(() => {
     if (lastResultsDir) await shell.openPath(lastResultsDir)
   })
 
-  const window = createWindow()
+  // A project that is a page gets a window showing that page. Everything else
+  // (including a project that failed to load, so its message can be shown)
+  // gets the Runner's own form.
+  const loaded = loadApp()
+  const page = loaded.ok ? pagePath(loaded.app.manifest) : null
+  const window = loaded.ok && page !== null ? createPageWindow(loaded.app.name, page) : createWindow()
 
   const screenshotFile = process.argv
     .find((arg) => arg.startsWith('--screenshot='))
     ?.slice('--screenshot='.length)
   if (screenshotFile) {
-    takeScreenshot(window, resolve(screenshotFile)).then((saved) => app.exit(saved ? 0 : 1))
+    takeScreenshot(window, resolve(screenshotFile), page !== null).then((saved) => app.exit(saved ? 0 : 1))
   }
 })
 

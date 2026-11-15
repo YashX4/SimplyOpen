@@ -1,6 +1,11 @@
 # The Factory: builds one project's app for Mac, Windows and Linux, tests each,
 # and offers the results as downloads.
 #
+# Most projects are Python programs, which get a private Python packed in with
+# them. A project that is a web page or a React component (a Claude artifact)
+# gets no Python: the app's window shows the page, and a component is built
+# into a page first (runner/scripts/build-react-page.mjs).
+#
 # Three ways it starts:
 #   - By itself, when the Runner or the example projects change. Builds the
 #     image resizer example.
@@ -102,7 +107,7 @@ jobs:
       - name: Check the Runner's own logic
         run: npm test
 
-      - name: Gather a private Python and the project
+      - name: Gather the project and what it needs to run
         run: |
           if [ -n "$PROJECT_URL" ]; then
             node scripts/fetch-project.mjs "$PROJECT_URL" "$APP_URL" "$SAMPLE_URL"
