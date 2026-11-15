@@ -11,6 +11,10 @@ export interface ProjectSummary {
   network_access: boolean
   stars: number
   updated_at: string
+  /** True once the latest version has passed its checks. */
+  checked: boolean
+  /** The systems the latest version has a finished build for. */
+  systems: string[]
 }
 
 /** Everything browse shows. Public only, newest change first. */
@@ -19,6 +23,9 @@ export async function listPublic(db: Db, limit = 24, offset = 0): Promise<Projec
     `select p.slug, p.name, p.description, u.name as owner_name,
             v.number as version_number, v.note, v.created_at as updated_at,
             coalesce(c.network_access, false) as network_access,
+            coalesce(c.status = 'passed', false) as checked,
+            coalesce((select array_agg(b.platform::text order by b.platform) from builds b
+                       where b.version_id = v.id and b.status = 'ready'), '{}') as systems,
             (select count(*)::int from stars s where s.project_id = p.id) as stars
      from projects p
      join users u on u.id = p.owner
@@ -44,6 +51,9 @@ export async function search(db: Db, q: string, limit = 24): Promise<ProjectSumm
     `select p.slug, p.name, p.description, u.name as owner_name,
             v.number as version_number, v.note, v.created_at as updated_at,
             coalesce(c.network_access, false) as network_access,
+            coalesce(c.status = 'passed', false) as checked,
+            coalesce((select array_agg(b.platform::text order by b.platform) from builds b
+                       where b.version_id = v.id and b.status = 'ready'), '{}') as systems,
             (select count(*)::int from stars s where s.project_id = p.id) as stars
      from projects p
      join users u on u.id = p.owner

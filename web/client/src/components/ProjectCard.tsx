@@ -1,47 +1,68 @@
 import { Link } from 'react-router-dom'
 import type { ProjectSummary } from '../api'
-import { Star, Who } from './bits'
+import { Checked, Star } from './bits'
+import { Cover, Thumb } from './Cover'
+import { s } from '../s'
+
+const SMALL = "font-size:14px;font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300"
+
+/** What sits at the foot of a card: the thing most worth knowing about it. */
+function Foot({ project }: { project: ProjectSummary }) {
+  // Almost nothing here touches the internet, so the ones that do say so
+  // before you open the page, not after you have downloaded them.
+  if (project.network_access) {
+    return <span style={s(`display:inline-flex;align-items:center;gap:6px;color:#b4563c;${SMALL}`)}>Uses the internet</span>
+  }
+  if (project.stars > 0) {
+    return (
+      <span style={s(`display:inline-flex;align-items:center;gap:6px;color:rgba(9,23,23,0.64);${SMALL}`)}>
+        <Star />{project.stars}
+      </span>
+    )
+  }
+  if (project.checked) return <Checked />
+  return <span style={s(`color:rgba(9,23,23,0.64);${SMALL}`)}>By {project.owner_name}</span>
+}
 
 /**
- * One project, as it appears in browse and in search results.
- *
- * The whole card is the link, so the target is big and anyone using a
- * keyboard tabs to one thing rather than three.
+ * One project on browse. The whole card is the link, so the target is
+ * big and a keyboard tabs to one thing rather than three. `size` is the
+ * difference between the three across row and the four across row.
  */
-export function ProjectCard({ project }: { project: ProjectSummary }) {
+export function ProjectCard({ project, size = 'big' }: { project: ProjectSummary; size?: 'big' | 'small' }) {
+  const big = size === 'big'
   return (
-    <Link className="panel stack" to={`/p/${project.slug}`} style={{ gap: 12 }}>
-      <span className="h3">{project.name}</span>
-      <span className="body">{project.description}</span>
-
-      <span style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
-        <Who name={project.owner_name} />
-        <span className="small">Version {project.version_number}</span>
-        {project.stars > 0 ? (
-          <span className="small" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-            <Star />
-            {project.stars}
-          </span>
-        ) : null}
-      </span>
-
-      {/* Almost nothing here touches the internet, so the ones that do say so
-          before you open the page, not after you have downloaded them. */}
-      {project.network_access ? (
-        <span className="small" style={{ color: 'var(--clay)' }}>Uses the internet</span>
-      ) : null}
+    <Link className="panel card" to={`/p/${project.slug}`}
+      style={s(`display:flex;flex-direction:column;gap:${big ? 18 : 14}px;padding:${big ? 24 : 18}px;text-decoration:none;color:#091717`)}>
+      <Cover slug={project.slug} />
+      <div style={s('display:flex;flex-direction:column;gap:7px;flex:1')}>
+        <div style={s(big
+          ? "font-size:24px;line-height:1.2;letter-spacing:-0.03em;font-variation-settings:'opsz' 24,'slnt' 0,'wdth' 100,'wght' 300"
+          : "font-size:20px;line-height:1.2;letter-spacing:-0.03em;font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300")}>
+          {project.name}
+        </div>
+        <div style={s("font-size:16px;line-height:1.35;color:rgba(9,23,23,0.64);font-variation-settings:'opsz' 16,'slnt' 0,'wdth' 100,'wght' 300")}>
+          {project.description}
+        </div>
+        <div style={{ flex: 1, minHeight: 12 }} />
+        <Foot project={project} />
+      </div>
     </Link>
   )
 }
 
-export function CardGrid({ projects }: { projects: ProjectSummary[] }) {
+/** One project in search results: a row, with the way in at the right. */
+export function ProjectRow({ project }: { project: ProjectSummary }) {
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-      gap: 32,
-    }}>
-      {projects.map((p) => <ProjectCard key={p.slug} project={p} />)}
-    </div>
+    <Link className="panel card" to={`/p/${project.slug}`}
+      style={s('display:flex;align-items:center;gap:22px;padding:20px;text-decoration:none;color:#091717')}>
+      <Thumb slug={project.slug} />
+      <span style={s('display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px')}>
+        <span className="h3" style={{ fontSize: 20 }}>{project.name}</span>
+        <span className="body" style={{ color: 'rgba(9,23,23,0.64)' }}>{project.description}</span>
+        <Foot project={{ ...project, stars: 0 }} />
+      </span>
+      <span className="ghost" style={{ flex: 'none' }}>Get it</span>
+    </Link>
   )
 }
