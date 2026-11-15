@@ -4,6 +4,7 @@ import { api, ApiError, readableSize } from '../api'
 import { Main, Page, Trouble } from '../components/bits'
 import { Box, CenterHero, Column, Mark, SignedIn, Steps, type MarkKind } from '../components/kit'
 import type { OrbSpec } from '../fx'
+import { looksLikeWebPage, pastedProblem, zipPasted, type PastedFile } from '../pasted'
 import { s } from '../s'
 
 const P1: OrbSpec[] = [[0.98, 0.9, 0.082, 'clay'], [0.02, 1.06, 0.12, 'teal']]
@@ -35,10 +36,12 @@ function Icon({ d, width = 1.5 }: { d: string; width?: number }) {
   )
 }
 
-function Way({ id, title, note, icon, on, off }: { id: string; title: string; note: string; icon: string; on?: boolean; off?: boolean }) {
+type How = 'zip' | 'art' | 'paste'
+
+function Way({ id, title, note, icon, how, choose }: { id: How; title: string; note: string; icon: string; how: How; choose: (id: How) => void }) {
   return (
-    <label className={off ? 'panel ch off' : 'panel ch'} htmlFor={`how-${id}`}>
-      <input type="radio" id={`how-${id}`} name="how" className="r" defaultChecked={on} disabled={off} />
+    <label className="panel ch" htmlFor={`how-${id}`}>
+      <input type="radio" id={`how-${id}`} name="how" className="r" checked={how === id} onChange={() => choose(id)} />
       <span className="ci"><Icon d={icon} /></span>
       <span className="ct">{title}</span>
       <span className="cd">{note}</span>
@@ -53,14 +56,19 @@ type Stage =
   | { at: 'cannot'; message: string }
   | { at: 'trouble'; message: string }
 
-/** P1, P2 and P5: choose the zip, wait while it is read, or hear why it could not be. */
+const MONO = 'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;min-height:200px'
+
+/** P1, P2 and P5: add the project, wait while it is read, or hear why it could not be. */
 export function Publish() {
   return <SignedIn current="Publish" orbs={P1}><PublishFlow /></SignedIn>
 }
 
 function PublishFlow() {
   const navigate = useNavigate()
+  const [how, setHow] = useState<How>('zip')
   const [file, setFile] = useState<File | null>(null)
+  const [pasted, setPasted] = useState<PastedFile[]>([{ name: '', text: '' }])
+  const [artifact, setArtifact] = useState('')
   const [over, setOver] = useState(false)
   const [warn, setWarn] = useState<string | null>(null)
   const [stage, setStage] = useState<Stage>({ at: 'choose' })
@@ -88,12 +96,35 @@ function PublishFlow() {
     setFile(chosen)
   }
 
+  const choose = (next: How) => { setHow(next); setWarn(null) }
+
+  const setPastedFile = (index: number, change: Partial<PastedFile>) =>
+    setPasted((files) => files.map((f, i) => (i === index ? { ...f, ...change } : f)))
+
+  /** The zip to send for the way that is chosen, or null after saying what is wrong. */
+  const whatToSend = (): File | null => {
+    if (how === 'zip') return file
+    if (how === 'paste') {
+      const problem = pastedProblem(pasted)
+      if (problem) { setWarn(problem); return null }
+      return zipPasted(pasted, 'pasted-files.zip')
+    }
+    if (!artifact.trim()) { setWarn('Paste the code from your artifact first.'); return null }
+    if (looksLikeWebPage(artifact)) {
+      setWarn('This looks like a web page or a React component. Those cannot be made into an app yet. Artifacts written in Python can.')
+      return null
+    }
+    return zipPasted([{ name: 'main.py', text: artifact }], 'claude-artifact.zip')
+  }
+
   const start = () => {
-    if (!file) return
+    const sending = whatToSend()
+    if (!sending) return
+    setWarn(null)
     const control = new AbortController()
     stop.current = control
     setStage({ at: 'reading', step: 0 })
-    api.upload(file, control.signal)
+    api.upload(sending, control.signal)
       .then((made) => navigate(`/publish/${made.project.slug}`))
       .catch((e: unknown) => {
         if (e instanceof DOMException && e.name === 'AbortError') return
@@ -103,6 +134,11 @@ function PublishFlow() {
   }
 
   const again = () => { setFile(null); setStage({ at: 'choose' }) }
+
+  const ready =
+    how === 'zip' ? file !== null
+    : how === 'paste' ? pasted.some((f) => f.name.trim() && f.text.trim())
+    : artifact.trim() !== ''
 
   if (stage.at === 'reading') {
     const steps = READING.map((label, i) => {
@@ -170,12 +206,13 @@ function PublishFlow() {
 
           <h2 style={s('margin:0;font-size:24px;line-height:1.2;letter-spacing:-0.03em')}>How are you adding it?</h2>
           <div className="g3c" role="radiogroup" aria-label="How are you adding it?">
-            <Way id="zip" title="A zip file" note="Everything in one folder" icon={ICON.zip} on />
-            <Way id="art" title="A Claude artifact" note="Not ready yet. Use a zip for now." icon={ICON.artifact} off />
-            <Way id="paste" title="Pasted files" note="Not ready yet. Use a zip for now." icon={ICON.paste} off />
+            <Way id="zip" title="A zip file" note="Everything in one folder" icon={ICON.zip} how={how} choose={choose} />
+            <Way id="art" title="A Claude artifact" note="Paste the code Claude wrote" icon={ICON.artifact} how={how} choose={choose} />
+            <Way id="paste" title="Pasted files" note="Type or paste each file" icon={ICON.paste} how={how} choose={choose} />
           </div>
 
           <div className="panel" style={{ padding: 22, marginTop: 4 }}>
+            {how === 'zip' ? (
             <label className={over ? 'drop over' : 'drop'} htmlFor="file"
               onDragOver={(e) => { e.preventDefault(); setOver(true) }}
               onDragLeave={() => setOver(false)}
@@ -190,11 +227,49 @@ function PublishFlow() {
                 {file ? 'Choose a different file' : 'Choose a file'}
               </span>
             </label>
+            ) : null}
+
+            {how === 'art' ? (
+              <div style={s('display:flex;flex-direction:column;gap:10px')}>
+                <label className="lab" htmlFor="artifact">The code from your artifact</label>
+                <textarea id="artifact" className="inp" style={s(MONO + ';min-height:280px')} spellCheck={false}
+                  placeholder="In Claude, open the artifact, choose Copy, and paste it here."
+                  value={artifact} onChange={(e) => { setArtifact(e.target.value); setWarn(null) }} />
+                <p className="small" style={{ margin: 0 }}>
+                  Artifacts written in Python work today. Web pages and React components are not supported yet.
+                </p>
+              </div>
+            ) : null}
+
+            {how === 'paste' ? (
+              <div style={s('display:flex;flex-direction:column;gap:22px')}>
+                {pasted.map((item, i) => (
+                  <div key={i} style={s('display:flex;flex-direction:column;gap:10px')}>
+                    <div style={s('display:flex;align-items:center;gap:12px')}>
+                      <input className="inp" type="text" aria-label={`Name of file ${i + 1}`} spellCheck={false}
+                        placeholder={i === 0 ? 'File name, like convert.py' : 'File name, like requirements.txt'}
+                        value={item.name} onChange={(e) => { setPastedFile(i, { name: e.target.value }); setWarn(null) }} />
+                      {pasted.length > 1 ? (
+                        <button type="button" className="ghost" style={{ flex: 'none' }}
+                          onClick={() => setPasted((files) => files.filter((_, at) => at !== i))}>Remove</button>
+                      ) : null}
+                    </div>
+                    <textarea className="inp" style={s(MONO)} aria-label={`What is in file ${i + 1}`} spellCheck={false}
+                      placeholder="Paste what is in the file"
+                      value={item.text} onChange={(e) => { setPastedFile(i, { text: e.target.value }); setWarn(null) }} />
+                  </div>
+                ))}
+                <div>
+                  <button type="button" className="ghost"
+                    onClick={() => setPasted((files) => [...files, { name: '', text: '' }])}>Add another file</button>
+                </div>
+              </div>
+            ) : null}
             {warn ? <p className="small" role="alert" style={{ margin: '14px 4px 0', color: '#b4563c' }}>{warn}</p> : null}
           </div>
 
           <div style={s('display:flex;align-items:center;gap:14px;margin-top:22px')}>
-            <button type="button" className="btn" disabled={!file} onClick={start}>Continue</button>
+            <button type="button" className="btn" disabled={!ready} onClick={start}>Continue</button>
             <Link className="ghost" to="/my-things">Cancel</Link>
           </div>
         </div>
