@@ -122,3 +122,25 @@ describe('signing up for the first time', () => {
     } finally { await h2.close() }
   })
 })
+
+describe('real email, through Resend', () => {
+  it('sends the link to Resend with the key, and says so plainly when that fails', async () => {
+    const { ResendMailer } = await import('../src/services/mailer.js')
+    const calls: { url: string; init: RequestInit }[] = []
+    const real = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      calls.push({ url, init })
+      return new Response(JSON.stringify({ id: 'x' }), { status: 200 })
+    }) as typeof fetch
+    try {
+      await new ResendMailer('re_test').send({ to: 'a@example.ac.uk', subject: 'Hi', text: 'Link' })
+      expect(calls[0]!.url).toBe('https://api.resend.com/emails')
+      expect((calls[0]!.init.headers as Record<string, string>).authorization).toBe('Bearer re_test')
+      expect(JSON.parse(calls[0]!.init.body as string).to).toEqual(['a@example.ac.uk'])
+      globalThis.fetch = (async () => new Response(JSON.stringify({ message: 'API key is invalid' }), { status: 401 })) as typeof fetch
+      await expect(new ResendMailer('bad').send({ to: 'a@b.co', subject: 's', text: 't' })).rejects.toThrow('API key is invalid')
+    } finally {
+      globalThis.fetch = real
+    }
+  })
+})

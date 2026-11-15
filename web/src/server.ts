@@ -13,7 +13,7 @@ import { connect, connectInMemory, type Db } from './db.js'
 import { migrate } from './migrate.js'
 import { HttpAnalyzer, type Analyzer } from './services/analyzer.js'
 import { GithubFactory, type Factory } from './services/factory.js'
-import { ConsoleMailer } from './services/mailer.js'
+import { ConsoleMailer, ResendMailer } from './services/mailer.js'
 import { HttpChat } from './services/chat.js'
 import { MemoryStorage, SupabaseStorage, type Storage } from './services/storage.js'
 
@@ -62,7 +62,8 @@ async function main(): Promise<void> {
     analyzer: env.ANALYZER_URL ? new HttpAnalyzer(env.ANALYZER_URL) : new NoAnalyzer(),
     storage,
     factory,
-    mailer: new ConsoleMailer(),
+    // Real email when there is a Resend key; otherwise the link prints here.
+    mailer: env.RESEND_API_KEY ? new ResendMailer(env.RESEND_API_KEY, env.MAIL_FROM || undefined) : new ConsoleMailer(),
     // SimplyOpen Chat, from chat/ in this repository. It listens on 3100.
     chat: env.CHAT_URL ? new HttpChat(env.CHAT_URL) : undefined,
     // Where the website is, because the sign in link opens the website.
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
     // No email is really sent, so on your own computer the page gets the link too.
     // Only ever for a site at localhost: anywhere public it would let anyone in as anyone.
     showSignInLinks:
+      !env.RESEND_API_KEY &&
       env.NODE_ENV !== 'production' &&
       /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(env.SITE_URL ?? 'http://localhost:5173'),
     logger: true,

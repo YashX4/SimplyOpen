@@ -83,3 +83,26 @@ Either way the person downloading needs no account, which is what matters.
 - Poll or webhook the Factory. `POST /api/versions/:id/refresh` does one pass;
   nothing calls it on a timer yet.
 - Install counts. Stars and copies are counted; installs are not.
+
+
+## Running everything at once
+
+From the top of the repository:
+
+```
+./dev.sh
+```
+
+It starts the analyzer (3000), chat (3100), this API (3200) and the website
+(5173), installing anything missing the first time. Anything already on
+those ports is stopped first, so running it again restarts everything.
+Ctrl+C stops all four. It reads the Claude key from `web/.env`.
+
+## Real sign in emails
+
+Make a free account at resend.com, create an API key, and put it in
+`web/.env` as `RESEND_API_KEY`. With Resend's own test sender, email only
+reaches the address the Resend account was made with. To email anyone,
+verify a domain in Resend and set `MAIL_FROM` to an address on it.
+Without a key, the link prints in the API's output, and on a site at
+localhost the check your email page shows it as a button.

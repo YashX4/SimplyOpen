@@ -21,14 +21,19 @@ export async function registerAuth(app: FastifyInstance, deps: AppDeps): Promise
     }
     const token = await users.startSignIn(deps.db, email)
     const link = `${site}/sign-in/done?token=${token}`
-    await deps.mailer.send({
-      to: email,
-      subject: 'Your link to sign in',
-      text:
-        `Open this on the computer you want to sign in on:\n\n` +
-        `${link}\n\n` +
-        `It works once, and it stops working after an hour.`,
-    })
+    try {
+      await deps.mailer.send({
+        to: email,
+        subject: 'Your link to sign in to SimplyOpen',
+        text:
+          `Open this on the computer you want to sign in on:\n\n` +
+          `${link}\n\n` +
+          `It works once, and it stops working after an hour.`,
+      })
+    } catch (error) {
+      request.log.error({ err: error }, 'sending the sign in email failed')
+      return fail(reply, 502, 'EMAIL_FAILED', 'The email could not be sent. Try again in a minute.')
+    }
     // The same answer whether or not that address has an account, so
     // nobody can use this to find out who has one.
     return reply.send(deps.showSignInLinks ? { sent: true, link } : { sent: true })
