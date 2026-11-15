@@ -187,3 +187,26 @@ button.nav{background:none;border:0;padding:0;cursor:pointer;font-family:inherit
 .bar i{display:block;width:40%;height:100%;border-radius:3px;background:#2f6f6a;animation:slide 1.4s ease-in-out infinite}
 @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 @media (prefers-reduced-motion: reduce){.bar i{animation:none;width:100%}}
+
+/*
+ * The header over the orbs. On the boards the orbs sit behind the top
+ * corners, and dark ink on a dark orb disappears. The bar is paper at 82
+ * percent with a blur: over plain paper it cannot be seen, over an orb it
+ * reads as frosted glass, like the panels. The muted links stay above 4.5
+ * to 1 against the darkest orb behind it.
+ */
+.topbar::before{content:"";position:absolute;left:0;top:0;right:0;bottom:-28px;z-index:-1;pointer-events:none;
+background:rgba(251,250,244,0.82);-webkit-backdrop-filter:blur(18px) saturate(1.15);backdrop-filter:blur(18px) saturate(1.15);
+/* Faded at the foot, so an orb passing under it melts into the page rather than being cut by a line. */
+-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0) 100%)}
+
+/* Increase contrast, from the computer's own settings: no glass, no orbs, full strength text. */
+@media (prefers-contrast: more){
+  .topbar::before{background:#FBFAF4;-webkit-backdrop-filter:none;backdrop-filter:none;-webkit-mask-image:none;mask-image:none;bottom:0;border-bottom:1px solid rgba(9,23,23,0.46)}
+  .pg canvas[data-orbs]{display:none !important}
+  .pg .nav,.pg .small,.pg .body,.pg .lab,.pg .cd,.pg .dn,.pg .more{color:#091717 !important}
+  /* Muted text set inline on the boards' own elements, which a class alone cannot reach. */
+  .pg [style*="rgba(9, 23, 23, 0.64)"],.pg [style*="rgba(9,23,23,0.64)"]{color:#091717 !important}
+  .panel{background:#fff;box-shadow:inset 0 0 0 1px rgba(9,23,23,0.46)}
+  .chip,.pill,.ghost,.inp,.wdrop,.drop{border-color:#091717}
+}

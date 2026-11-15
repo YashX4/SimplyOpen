@@ -100,8 +100,8 @@ export function Header({ current }: { current?: NavName }) {
   const { me, waiting } = useSession()
   const ink = (name: NavName) => (name === current ? { color: '#091717' } : undefined)
   return (
-    <header className="wrap" style={s('position:relative;z-index:5;display:flex;align-items:center;flex-wrap:wrap;gap:8px 28px;padding-top:24px;padding-bottom:24px')}>
-      <Link to="/" aria-label="Home" style={s('display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;color:#091717;border-radius:50%;background:rgba(251,250,244,0.9)')}>
+    <header className="wrap topbar" style={s('position:relative;z-index:5;display:flex;align-items:center;flex-wrap:wrap;gap:8px 28px;padding-top:24px;padding-bottom:24px')}>
+      <Link to="/" aria-label="Home" style={s('display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;color:#091717')}>
         <svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.4">
           <circle cx="16" cy="16" r="10" />
           <circle cx="24.5" cy="9" r="2.4" fill="currentColor" stroke="none" />
@@ -117,7 +117,7 @@ export function Header({ current }: { current?: NavName }) {
       </Link>
       <div style={{ flex: 1 }} />
       {me ? (
-        <Link className="nav who" to="/my-things" style={s('padding:0 16px 0 7px;border-radius:999px;background:rgba(251,250,244,0.9);color:#091717')}>
+        <Link className="nav who" to="/my-things" style={{ color: '#091717' }}>
           <Avatar name={me.name} size={30} />
           {me.name.split(/\s+/)[0]}
         </Link>
