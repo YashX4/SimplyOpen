@@ -4,7 +4,7 @@
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { spawn, spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -226,7 +226,49 @@ async function smokeTest(): Promise<boolean> {
   return true
 }
 
-function createWindow(): void {
+/**
+ * The picture mode, used by the Factory to show what this project's window
+ * looks like. Started with `--screenshot=<file>`, the app opens its normal
+ * window, waits for the form to be drawn, saves a picture of it as a PNG, and
+ * quits. Nothing is run.
+ */
+async function takeScreenshot(window: BrowserWindow, file: string): Promise<boolean> {
+  try {
+    if (window.webContents.isLoading()) {
+      await new Promise<void>((loaded) => window.webContents.once('did-finish-load', () => loaded()))
+    }
+    // Wait until the page shows the app's name or an error (up to 10 seconds),
+    // then report how tall the whole page is.
+    const pageHeight: number = await window.webContents.executeJavaScript(`
+      new Promise((done) => {
+        const started = Date.now()
+        const check = () => {
+          if (document.querySelector('h1') || Date.now() - started > 10000) {
+            requestAnimationFrame(() => done(document.documentElement.scrollHeight))
+          } else {
+            setTimeout(check, 100)
+          }
+        }
+        check()
+      })
+    `)
+    // Make the window tall enough to show the whole form, within reason.
+    const [width] = window.getContentSize()
+    window.setContentSize(width, Math.min(Math.max(pageHeight, 300), 1400))
+    await new Promise((settled) => setTimeout(settled, 500))
+
+    const picture = await window.webContents.capturePage()
+    if (picture.isEmpty()) throw new Error('the picture came out empty')
+    writeFileSync(file, picture.toPNG())
+    console.log(`SCREENSHOT SAVED: ${file}`)
+    return true
+  } catch (error) {
+    console.log(`SCREENSHOT FAILED: ${String(error)}`)
+    return false
+  }
+}
+
+function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 560,
     height: 720,
@@ -240,6 +282,7 @@ function createWindow(): void {
   } else {
     window.loadFile(join(__dirname, '../renderer/index.html'))
   }
+  return window
 }
 
 app.whenReady().then(() => {
@@ -275,7 +318,14 @@ app.whenReady().then(() => {
     if (lastResultsDir) await shell.openPath(lastResultsDir)
   })
 
-  createWindow()
+  const window = createWindow()
+
+  const screenshotFile = process.argv
+    .find((arg) => arg.startsWith('--screenshot='))
+    ?.slice('--screenshot='.length)
+  if (screenshotFile) {
+    takeScreenshot(window, resolve(screenshotFile)).then((saved) => app.exit(saved ? 0 : 1))
+  }
 })
 
 app.on('window-all-closed', () => app.quit())

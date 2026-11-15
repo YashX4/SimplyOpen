@@ -52,6 +52,15 @@ const result = spawnSync(appPath, ['--smoke-test'], {
 
 if (result.status === 0) {
   console.log('\nThe app passed its test.')
+
+  // Also save a picture of the app's window, for the website to show. A
+  // missing picture is not a reason to fail the build.
+  const picture = spawnSync(appPath, [`--screenshot=${join(distDir, 'screenshot.png')}`], {
+    stdio: 'inherit',
+    env,
+    timeout: 60 * 1000,
+  })
+  if (picture.status !== 0) console.error('Could not take a picture of the app window.')
 } else {
   console.error(`\nThe app failed its test (exit code ${result.status ?? 'none, timed out or crashed'}).`)
 }
