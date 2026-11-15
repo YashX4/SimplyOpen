@@ -1,0 +1,110 @@
+{
+  "name": "Spreadsheet Combiner",
+  "description": "Combine several CSV spreadsheets into one, and optionally remove repeated rows.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "merge",
+          "path": "merge.py",
+          "working_directory": "",
+          "run_command": "python merge.py {args}",
+          "description": "Combines CSV files into one file called combined.csv.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "merge",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "files",
+        "kind": "file",
+        "label": "Spreadsheets to combine",
+        "help": "Choose two or more CSV files.",
+        "required": true,
+        "accepts": [".csv"],
+        "multiple": true,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the combined file in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      },
+      {
+        "id": "remove_duplicates",
+        "kind": "boolean",
+        "label": "Remove repeated rows",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--remove-duplicates",
+        "env_binding": null
+      },
+      {
+        "id": "sort_by",
+        "kind": "text",
+        "label": "Sort by column",
+        "help": "The name of a column, exactly as it appears in the first row. Leave empty to keep the original order.",
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--sort-by {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "combined",
+        "kind": "file",
+        "label": "Combined spreadsheet",
+        "path_pattern": "{output_dir}/combined.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": ["python>=3.9"],
+      "packages": ["pandas"],
+      "system": [],
+      "operating_systems": ["macos", "windows", "linux"]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}
