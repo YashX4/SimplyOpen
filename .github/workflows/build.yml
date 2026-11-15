@@ -19,6 +19,8 @@
 #       https://github.com/<owner>/<repo>/releases/download/build-<build_id>/app-windows.zip
 #       https://github.com/<owner>/<repo>/releases/download/build-<build_id>/app-linux.zip
 #     A system whose build or test failed has no file there.
+#   - A picture of the app's window: the "screenshot" artifact on the run, and
+#     screenshot.png on the release.
 
 name: Build apps
 run-name: Build ${{ inputs.build_id || 'example project' }}
@@ -129,6 +131,17 @@ jobs:
           path: runner/dist/*.zip
           if-no-files-found: error
 
+      # One picture of the app's window, for the website to show. The Mac one
+      # is used because its text looks best. Named so that it can't be mistaken
+      # for one of the app downloads.
+      - name: Offer a picture of the app's window
+        if: matrix.system == 'Mac'
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshot
+          path: runner/dist/screenshot.png
+          if-no-files-found: warn
+
   # Puts the finished apps somewhere anyone can download them. This job never
   # runs uploaded code: it only moves the files the build job produced. That is
   # why it, and not the build job, is allowed to write to the repository.
@@ -160,6 +173,13 @@ jobs:
           pattern: app-*
           path: apps
 
+      - name: Collect the picture of the app's window, if there is one
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: screenshot
+          path: picture
+
       - name: Give each app a fixed file name
         run: |
           mkdir out
@@ -174,6 +194,7 @@ jobs:
             echo "No system produced an app, so there is nothing to publish."
             exit 1
           fi
+          if [ -f picture/screenshot.png ]; then cp picture/screenshot.png out/; fi
 
       - name: Publish to a release
         run: |
@@ -182,5 +203,5 @@ jobs:
             gh release create "$tag" --target "$GITHUB_SHA" --title "Build $BUILD_ID" \
               --notes "Apps built by the SimplyOpen Factory. Each was started and tested before being published."
           fi
-          gh release upload "$tag" out/*.zip --clobber
+          gh release upload "$tag" out/* --clobber
           echo "Published: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$tag"
