@@ -16,7 +16,7 @@ What the `web-accounts` branch adds to the web backend, why, and what has to hap
 Three decisions were made before starting:
 
 - **Passwords sit beside the emailed sign-in link.** The link still works; nothing was removed.
-- **One version history, in this database.** The separate `history/` service from PR #10 is retired.
+- **One version history, in this database.** The separate `history/` service from PR #10, and the chat's link to it (`HISTORY_URL`), are removed by this branch.
 - **The work is on its own branch** (`web-accounts`, off `web`), in new files wherever possible.
 
 ## Task 1: accounts with a password
@@ -142,7 +142,7 @@ Everything else is in new files.
 ## What has to happen next
 
 1. **Merge this branch into `web`,** then run `npm run migrate` against Supabase. Until then none of these tables exist there, and a server without `DATABASE_URL` keeps everything in memory.
-2. **Close or rework PR #10.** Its `history/` service is replaced by the `versions` table here.
+2. **Stop running the `history/` service** anywhere it was started. It and the chat's `HISTORY_URL` setting are gone; versions live in the `versions` table.
 3. **Build the pages** for sign-up and log-in, the copy workspace with its chat, the shelves, and questions.
 4. **Send real email.** Sign-in and confirm links are only printed to the server's terminal today.
 5. **Protect stored code.** Code zips are reachable by anyone who has their long, unguessable link. A private copy's code needs signed, expiring links to be truly private.

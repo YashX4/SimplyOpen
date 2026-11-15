@@ -35,7 +35,7 @@ import type { ProjectSummary } from "./types.js";
 export interface RequestedAnalysis {
   /** A few plain words naming the project. */
   name: string;
-  /** One to three plain-English sentences for people who have never coded. */
+  /** What it does: one or two plain-English sentences for people who have never coded, at most 200 characters. */
   description: string;
   /** The manifest for the project. */
   manifest: Manifest;
@@ -268,7 +268,7 @@ export function buildSubmitToolInputSchema(): Anthropic.Beta.Messages.BetaTool.I
     required: ["name", "description", "manifest"],
     properties: {
       name: { type: "string", description: "A few plain words naming the project." },
-      description: { type: "string", description: "One to three plain-English sentences for non-technical people." },
+      description: { type: "string", description: "What it does, for non-technical people: one or two plain-English sentences, at most 200 characters." },
       manifest: toStrictSchema(source),
     },
     $defs,
