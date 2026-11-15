@@ -17,6 +17,9 @@ import {
   ChatBusyError,
   ChatModelError,
   ChatSession,
+  earlierToMessages,
+  MAX_EARLIER_CHARS,
+  MAX_EARLIER_MESSAGES,
   HttpProjectChecker,
   ProjectFolder,
   type ChatReply,
@@ -769,5 +772,81 @@ describe("HTTP service", () => {
     expect(during).toHaveLength(1);
     await app.close();
     expect((await readdir(os.tmpdir())).filter((n) => during.includes(n))).toEqual([]);
+  });
+});
+
+describe("picking up an earlier conversation", () => {
+  const earlier = [
+    { role: "user" as const, text: "Make the pictures smaller" },
+    { role: "assistant" as const, text: "Pictures now come out 640 pixels wide." },
+  ];
+
+  it("Claude starts already knowing what was said, and is told to look at the files again", async () => {
+    const model = new ScriptedModel([answer("They are 640 wide, as you asked earlier.")]);
+    const chat = new ChatSession(await ProjectFolder.open(await makeProject()), { model, earlier });
+    await chat.send("How wide are they now?");
+    expect(model.requests[0]!.messages).toEqual([
+      { role: "user", content: "Make the pictures smaller" },
+      { role: "assistant", content: "Pictures now come out 640 pixels wide." },
+      { role: "user", content: expect.stringMatching(/^\(We are carrying on from an earlier session\..*look at them again.*\)\n\nHow wide are they now\?$/s) },
+    ]);
+    // The note is only sent once.
+    model.requests.length = 0;
+    (model as unknown as { steps: unknown[] }).steps.push(answer("ok"));
+    await chat.send("Thanks");
+    expect(model.requests[0]!.messages.at(-1)).toEqual({ role: "user", content: "Thanks" });
+  });
+
+  it("tidies an untidy history so the turns alternate, start with the person and end with an answer", () => {
+    expect(
+      earlierToMessages([
+        { role: "assistant", text: "A stray answer" },
+        { role: "user", text: " One " },
+        { role: "user", text: "Two" },
+        { role: "assistant", text: "" },
+        { role: "assistant", text: "Answer" },
+        { role: "user", text: "A question nobody answered" },
+      ]),
+    ).toEqual([
+      { role: "user", content: "One\n\nTwo" },
+      { role: "assistant", content: "Answer" },
+    ]);
+    expect(earlierToMessages([])).toEqual([]);
+    expect(earlierToMessages([{ role: "user", text: "only a question" }])).toEqual([]);
+  });
+
+  it("keeps only the newest messages, and cuts very long ones", () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({ role: i % 2 ? ("assistant" as const) : ("user" as const), text: `m${i}` }));
+    const kept = earlierToMessages(many);
+    expect(kept).toHaveLength(MAX_EARLIER_MESSAGES);
+    expect(kept.at(-1)).toEqual({ role: "assistant", content: "m199" });
+    const long = earlierToMessages([{ role: "user", text: "x".repeat(10_000) }, { role: "assistant", text: "ok" }]);
+    expect((long[0]!.content as string).length).toBe(MAX_EARLIER_CHARS);
+  });
+
+  it("the service takes the earlier conversation when a session starts, and refuses a malformed one", async () => {
+    const model = new ScriptedModel([answer("ok")]);
+    const app = await buildServer({ logger: false, session: { model } });
+    const start = (earlierField: string) => {
+      const boundary = "----earlier";
+      const zip = zipSync({ "a.py": new TextEncoder().encode("print(1)\n") });
+      const payload = Buffer.concat([
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="earlier"\r\n\r\n${earlierField}\r\n`),
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="p.zip"\r\nContent-Type: application/zip\r\n\r\n`),
+        Buffer.from(zip),
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+      return app.inject({ method: "POST", url: "/sessions", payload, headers: { "content-type": `multipart/form-data; boundary=${boundary}` } });
+    };
+    for (const bad of ["not json", '{"role":"user"}', '[{"role":"system","text":"x"}]', '[{"role":"user","text":5}]']) {
+      expect((await start(bad)).json().error.code).toBe("BAD_EARLIER");
+    }
+    const { sessionId } = (await start(JSON.stringify(earlier))).json() as { sessionId: string };
+    await app.inject({ method: "POST", url: `/sessions/${sessionId}/messages`, payload: { message: "And now?" } });
+    expect(model.requests[0]!.messages.slice(0, 2)).toEqual([
+      { role: "user", content: "Make the pictures smaller" },
+      { role: "assistant", content: "Pictures now come out 640 pixels wide." },
+    ]);
+    await app.close();
   });
 });

@@ -77,21 +77,152 @@ describe('the maker changing it by chatting', () => {
     expect(page.json().builds).toHaveLength(3)
   })
 
-  it('starting again ends the chat that was already going', async () => {
+  it('starting again carries on the chat that was already going', async () => {
     const { cookie } = await priya()
     const first = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
-    await post(`/api/projects/${SLUG}/chats`, cookie)
+    const again = await post(`/api/projects/${SLUG}/chats`, cookie)
+    expect(again.json().chat.id).toBe(first)
     expect(h.chat.sessions.size).toBe(1)
+    expect((await post(`/api/chats/${first}/messages`, cookie, { message: 'change it' })).statusCode).toBe(200)
+  })
+
+  it('a new version of the project means the next chat starts afresh', async () => {
+    const { cookie, project } = await priya()
+    const first = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
+    const stored = await h.storage.put('uploads/next/project.zip', new TextEncoder().encode('version six'), 'application/zip')
+    await versions.append(h.db, { project_id: project.id, note: 'Sixth.', created_by: project.owner, source_zip_url: stored.url })
+    const next = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat
+    expect(next.id).not.toBe(first)
+    expect(next.from_version).toBe(6)
+    expect(new TextDecoder().decode(h.chat.started.at(-1))).toBe('version six')
     expect((await post(`/api/chats/${first}/messages`, cookie, { message: 'change it' })).statusCode).toBe(410)
   })
 
-  it('says when the chat has ended', async () => {
+  it('says the chat has ended only when it is gone for good', async () => {
     const { cookie } = await priya()
     const id = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
-    h.chat.sessions.clear()
+    await h.app.inject({ method: 'DELETE', url: `/api/chats/${id}`, headers: { cookie } })
     const res = await post(`/api/chats/${id}/messages`, cookie, { message: 'change it' })
     expect(res.statusCode).toBe(410)
     expect(res.json().error.code).toBe('CHAT_ENDED')
+  })
+})
+
+describe('a chat that lasts', () => {
+  const get = (url: string, cookie: string) => h.app.inject({ method: 'GET', url, headers: { cookie } })
+  const text = (bytes: Uint8Array | undefined) => new TextDecoder().decode(bytes)
+  const start = async () => {
+    const { cookie } = await priya()
+    const id = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id as string
+    return { cookie, id }
+  }
+
+  it('keeps everything that was said', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'what did you do?' })
+    expect((await get(`/api/chats/${id}`, cookie)).json().messages).toMatchObject([
+      { role: 'you', text: 'change the colour', version_number: null },
+      { role: 'assistant', text: 'Done.', version_number: 1 },
+      { role: 'you', text: 'what did you do?', version_number: null },
+      { role: 'assistant', text: 'No, I cannot do that one.', version_number: null },
+    ])
+  })
+
+  it('the privacy reminder is not saved, because nothing was sent', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change it for jane@example.com' })
+    expect((await get(`/api/chats/${id}`, cookie)).json().messages).toEqual([])
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change it for jane@example.com', confirmPrivate: true })
+    expect((await get(`/api/chats/${id}`, cookie)).json().messages).toHaveLength(2)
+  })
+
+  it('is picked up where it was left when the chat service has forgotten it', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    h.chat.sessions.clear() // an hour passed, or the chat service restarted
+
+    const res = await post(`/api/chats/${id}/messages`, cookie, { message: 'change the size' })
+    expect(res.statusCode).toBe(200)
+    // It was started again from the code the chat last left, already knowing what was said.
+    expect(text(h.chat.started[1])).toBe('changed 1')
+    expect(h.chat.earlier[1]).toEqual([
+      { role: 'user', text: 'change the colour' },
+      { role: 'assistant', text: 'Done.' },
+    ])
+    // Changes keep counting up from where they were, and the earlier one is still listed.
+    expect(res.json().version).toMatchObject({ number: 2, label: 'You asked: change the size' })
+    const page = (await get(`/api/chats/${id}`, cookie)).json()
+    expect(page.versions.map((v: { number: number; label: string }) => [v.number, v.label])).toEqual([
+      [0, 'Your copy'],
+      [1, 'You asked: change the colour'],
+      [2, 'You asked: change the size'],
+    ])
+    expect(page.messages).toHaveLength(4)
+  })
+
+  it('opening the page again, or on another computer, finds the same chat', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    h.chat.sessions.clear()
+
+    const again = (await post(`/api/projects/${SLUG}/chats`, cookie)).json()
+    expect(again.chat.id).toBe(id)
+    expect(again.versions.map((v: { number: number }) => v.number)).toEqual([0, 1])
+    expect(again.messages).toHaveLength(2)
+    expect(text(h.chat.started.at(-1))).toBe('changed 1')
+  })
+
+  it('undo and going back are saved too, and work after being picked up again', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change one' })
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change two' })
+    h.chat.sessions.clear()
+
+    expect((await post(`/api/chats/${id}/undo`, cookie)).json().version).toMatchObject({ number: 3 })
+    expect((await post(`/api/chats/${id}/versions/3/restore`, cookie)).json().version).toMatchObject({ number: 4 })
+    // A change from before it was picked up again is listed, but can no longer be gone back to.
+    const tooFar = await post(`/api/chats/${id}/versions/1/restore`, cookie)
+    expect([tooFar.statusCode, tooFar.json().error.code]).toEqual([409, 'TOO_FAR_BACK'])
+    expect((await get(`/api/chats/${id}`, cookie)).json().versions.map((v: { number: number }) => v.number)).toEqual([0, 1, 2, 3, 4])
+  })
+
+  it('making it a version uses the picked-up code', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    h.chat.sessions.clear()
+    const made = await post(`/api/chats/${id}/release`, cookie, { note: 'A new colour.' })
+    expect(made.statusCode).toBe(201)
+    expect(text(h.chat.started.at(-1))).toBe('changed 1')
+  })
+
+  it('each person has their own chat about the same project', async () => {
+    const a = await h.signIn('a@example.com')
+    const b = await h.signIn('b@example.com')
+    const chatOf = async (who: { cookie: string }) => {
+      const copy = (await post(`/api/projects/${SLUG}/copies`, who.cookie)).json().copy.id
+      return (await post(`/api/copies/${copy}/chats`, who.cookie)).json().chat.id as string
+    }
+    const [mine, theirs] = [await chatOf(a), await chatOf(b)]
+    await post(`/api/chats/${mine}/messages`, a.cookie, { message: 'change it to blue' })
+    expect((await get(`/api/chats/${theirs}`, b.cookie)).json().messages).toEqual([])
+    expect((await get(`/api/chats/${mine}`, b.cookie)).statusCode).toBe(410)
+  })
+
+  it('ending a chat removes what was saved of it', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    await h.app.inject({ method: 'DELETE', url: `/api/chats/${id}`, headers: { cookie } })
+    expect((await h.db.query('select 1 from chats')).rows).toHaveLength(0)
+    expect((await h.db.query('select 1 from chat_messages')).rows).toHaveLength(0)
+  })
+
+  it('says so when the saved files have gone and it cannot be picked up', async () => {
+    const { cookie, id } = await start()
+    h.chat.sessions.clear()
+    h.storage.files.clear()
+    const res = await post(`/api/chats/${id}/messages`, cookie, { message: 'change it' })
+    expect([res.statusCode, res.json().error.code]).toEqual([409, 'NO_SOURCE'])
   })
 })
 
@@ -115,7 +246,14 @@ describe('a copy, changed and offered back', () => {
     expect((await post(`/api/chats/${chat.id}/keep`, them.cookie)).statusCode).toBe(200)
     const after = await suggestions.copyById(h.db, copy.id)
     expect(after!.working_zip_url).toBeTruthy()
-    // The next chat on the copy starts from where it got to.
+    // It became the next version in the copy's own history, named after what was asked.
+    const history = (await h.app.inject({ method: 'GET', url: `/api/copies/${copy.id}/versions`, headers: { cookie: them.cookie } })).json().versions
+    expect(history.map((v: { number: number; note: string }) => [v.number, v.note])).toEqual([
+      [2, 'You asked: change the spreadsheet'],
+      [1, 'Copied from version 5 of Zoom transcripts to NVivo.'],
+    ])
+    // A later chat on the copy starts from where it got to.
+    h.chat.sessions.clear()
     await post(`/api/copies/${copy.id}/chats`, them.cookie)
     expect(new TextDecoder().decode(h.chat.started[1])).toBe('changed 1')
   })
