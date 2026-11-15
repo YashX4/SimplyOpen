@@ -16,6 +16,9 @@ module.exports = {
   // A unique id per project, so the system treats each as a separate app.
   appId: `dev.simplyopen.${slug}`,
   directories: { output: 'dist' },
+  // Makes the running app know itself by the project's name, so each project's
+  // app keeps its own data folder instead of all sharing one.
+  extraMetadata: { productName: safeName },
 
   // The Runner's own code: only the built output, not the source.
   files: ['out/**', 'package.json'],
