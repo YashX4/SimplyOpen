@@ -24,19 +24,6 @@ export interface CopyVersion {
 /** The columns of `versions` that a copy's version shows. */
 const COLUMNS = 'id, copy_id, number, note, source_zip_url, restored_from, created_at'
 
-/** A copy with where it came from, for the "Copied from" line. */
-export interface CopyDetail {
-  copy: Copy
-  copied_from: {
-    project: { slug: string; name: string }
-    maker_name: string
-    version_number: number
-  }
-  /** The copy's newest version, which is the copy as it is now. */
-  current: CopyVersion
-  versions: number
-}
-
 /**
  * Make sure the copy has its version 1, and return it. Version 1 is the
  * code the copy was made from; it is written the first time anything asks
@@ -112,26 +99,4 @@ export async function restore(db: Db, copy: Copy, number: number): Promise<CopyV
   const newest = (await list(db, copy))[0]
   if (!target || !newest || target.number === newest.number) return null
   return append(db, copy, { note: `Went back to version ${target.number}.`, source_zip_url: target.source_zip_url, restored_from: target.number })
-}
-
-/** The copy, where it came from, and its newest version. */
-export async function detail(db: Db, copy: Copy): Promise<CopyDetail | null> {
-  const from = one(
-    await db.query<{ slug: string; name: string; maker_name: string; version_number: number }>(
-      `select p.slug, p.name, u.name as maker_name, v.number as version_number
-       from versions v join projects p on p.id = v.project_id join users u on u.id = p.owner
-       where v.id = $1`,
-      [copy.from_version_id],
-    ),
-  )
-  const all = await list(db, copy)
-  const current = all[0]
-  if (!from || !current) return null
-  return {
-    // The working zip may have moved since `copy` was read.
-    copy: { ...copy, working_zip_url: current.source_zip_url },
-    copied_from: { project: { slug: from.slug, name: from.name }, maker_name: from.maker_name, version_number: from.version_number },
-    current,
-    versions: all.length,
-  }
 }

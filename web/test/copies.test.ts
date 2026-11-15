@@ -43,16 +43,15 @@ const versionsOf = async (id = copyId) => (await get(`/api/copies/${id}/versions
 
 describe('a copy', () => {
   it('starts as version 1: the code it was copied from, and says where that was', async () => {
-    const reply = await get(`/api/copies/${copyId}`)
-    expect(reply.statusCode).toBe(200)
-    expect(reply.json()).toMatchObject({
-      copy: { id: copyId, name: 'Your copy of Zoom transcripts to NVivo', working_zip_url: 'memory://files/demo-v3.zip' },
-      copied_from: { project: { slug: DEMO, name: 'Zoom transcripts to NVivo' }, maker_name: 'Priya Raman', version_number: 3 },
-      current: { number: 1, note: 'Copied from version 3 of Zoom transcripts to NVivo.', source_zip_url: 'memory://files/demo-v3.zip' },
-      versions: 1,
-    })
+    expect(await versionsOf()).toMatchObject([
+      { number: 1, note: 'Copied from version 3 of Zoom transcripts to NVivo.', source_zip_url: 'memory://files/demo-v3.zip', is_current: true },
+    ])
     // Asking again never makes a second version 1.
     expect(await versionsOf()).toHaveLength(1)
+    // The copy itself, with where it came from, is the page's own address.
+    expect((await get(`/api/copies/${copyId}`)).json()).toMatchObject({
+      project: { slug: DEMO, maker: 'Priya Raman' }, from_version: { number: 3 },
+    })
   })
 
   it('every change kept becomes the next version, newest first, with its code stored', async () => {
@@ -70,7 +69,6 @@ describe('a copy', () => {
     // Each save stored its own zip, and the copy now points at the newest.
     expect(new Set(all.map((v) => v.source_zip_url)).size).toBe(3)
     expect(h.storage.files.size).toBe(2)
-    expect((await get(`/api/copies/${copyId}`)).json().copy.working_zip_url).toBe(all[0]!.source_zip_url)
     // The copy's own row moves along too, which is what Yash's "things you made" page reads.
     expect((await h.db.query('select working_zip_url from copies where id = $1', [copyId])).rows[0]).toEqual({ working_zip_url: all[0]!.source_zip_url })
   })
@@ -89,7 +87,7 @@ describe('a copy', () => {
 
     const all = await versionsOf()
     expect(all.map((v) => v.number)).toEqual([4, 3, 2, 1])
-    expect((await get(`/api/copies/${copyId}`)).json().copy.working_zip_url).toBe('memory://files/demo-v3.zip')
+    expect((await h.db.query<{ working_zip_url: string }>('select working_zip_url from copies where id = $1', [copyId])).rows[0]!.working_zip_url).toBe('memory://files/demo-v3.zip')
     // And forward again, to version 3.
     expect((await post(`/api/copies/${copyId}/versions/3/restore`)).json().version).toMatchObject({ number: 5, restored_from: 3 })
     // Going back to the newest is nothing to do.
@@ -154,7 +152,7 @@ describe('a copy is private to its owner', () => {
 
   it('an id that is not an id is simply not found', async () => {
     for (const id of ['nope', "1' or '1'='1", '../x']) {
-      expect((await get(`/api/copies/${encodeURIComponent(id)}`)).statusCode).toBe(404)
+      expect((await get(`/api/copies/${encodeURIComponent(id)}/versions`)).statusCode).toBe(404)
     }
   })
 })

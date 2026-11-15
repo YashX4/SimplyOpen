@@ -12,9 +12,9 @@ import { buildApp } from './app.js'
 import { connect, connectInMemory, type Db } from './db.js'
 import { migrate } from './migrate.js'
 import { HttpAnalyzer, type Analyzer } from './services/analyzer.js'
-import { HttpChatService } from './services/chat.js'
 import { GithubFactory, type Factory } from './services/factory.js'
 import { ConsoleMailer } from './services/mailer.js'
+import { HttpChat } from './services/chat.js'
 import { MemoryStorage, SupabaseStorage, type Storage } from './services/storage.js'
 
 class NoAnalyzer implements Analyzer {
@@ -63,10 +63,16 @@ async function main(): Promise<void> {
     storage,
     factory,
     mailer: new ConsoleMailer(),
-    ...(env.CHAT_URL ? { chat: new HttpChatService(env.CHAT_URL) } : {}),
+    // SimplyOpen Chat, from chat/ in this repository. It listens on 3100.
+    chat: env.CHAT_URL ? new HttpChat(env.CHAT_URL) : undefined,
     teamEmails: (env.TEAM_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean),
     // Where the website is, because the sign in link opens the website.
     siteUrl: env.SITE_URL ?? 'http://localhost:5173',
+    // No email is really sent, so on your own computer the page gets the link too.
+    // Only ever for a site at localhost: anywhere public it would let anyone in as anyone.
+    showSignInLinks:
+      env.NODE_ENV !== 'production' &&
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(env.SITE_URL ?? 'http://localhost:5173'),
     logger: true,
   })
 

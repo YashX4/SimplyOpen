@@ -13,7 +13,6 @@ import multipart from '@fastify/multipart'
 import type { Db } from './db.js'
 import * as users from './repo/users.js'
 import type { Analyzer } from './services/analyzer.js'
-import type { ChatService } from './services/chat.js'
 import type { Factory } from './services/factory.js'
 import type { Mailer } from './services/mailer.js'
 import type { Storage } from './services/storage.js'
@@ -22,7 +21,6 @@ import { registerAuth } from './routes/auth.js'
 import { registerAccounts } from './routes/accounts.js'
 import { registerFacts } from './routes/facts.js'
 import { registerCopies } from './routes/copies.js'
-import { registerChat } from './routes/chat.js'
 import { registerShelves } from './routes/shelves.js'
 import { registerQuestions } from './routes/questions.js'
 import { registerBrowse } from './routes/browse.js'
@@ -30,6 +28,8 @@ import { registerProjects } from './routes/projects.js'
 import { registerUploads } from './routes/uploads.js'
 import { registerSuggestions } from './routes/suggestions.js'
 import { registerMe } from './routes/me.js'
+import { registerChat } from './routes/chat.js'
+import type { Chat } from './services/chat.js'
 
 export interface AppDeps {
   db: Db
@@ -37,12 +37,18 @@ export interface AppDeps {
   storage: Storage
   factory: Factory
   mailer: Mailer
-  /** The chat service, for changing a copy by talking. Without it, the chat answers 503. */
-  chat?: ChatService
+  /** SimplyOpen Chat. Without it, changing things by chatting says it is not set up. */
+  chat?: Chat
   /** Email addresses of the team, who choose the "Picks from the team" shelf. */
   teamEmails?: string[]
   /** Where the browser is, for the sign in link. */
   siteUrl?: string
+  /**
+   * Hand the sign in link back to the page as well as emailing it. Only for
+   * a site running on your own computer, where no email is really sent.
+   * Never on a public site: it would let anyone sign in as anyone.
+   */
+  showSignInLinks?: boolean
   maxUploadBytes?: number
   logger?: boolean
 }
@@ -115,8 +121,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerUploads(app, deps)
   await registerSuggestions(app, deps)
   await registerCopies(app, deps)
-  await registerChat(app, deps)
   await registerMe(app, deps)
+  await registerChat(app, deps)
 
   app.setNotFoundHandler((request, reply) =>
     fail(reply, 404, 'NOT_FOUND', 'There is nothing at that address.'),

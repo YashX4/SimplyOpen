@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, inWords, readableAgo, SEEN_BY, type MyThings as Things, type SuggestionDetail } from '../api'
+import { api, displayName, inWords, readableAgo, SEEN_BY, type MyThings as Things, type SuggestionDetail } from '../api'
 import { Avatar, Hero, Main, Page, Plain, refreshSession, Trouble, useSession } from '../components/bits'
 import { Box, CenterHero, Column, Door, Doors, Line, Meta, Rows, SignedIn, TwoUp, useLoad } from '../components/kit'
 import type { OrbSpec } from '../fx'
@@ -52,7 +52,7 @@ function MyThingsPage() {
   return (
     <Page current="My things" orbs={M}>
       <Hero pre={<p className="small" style={{ margin: 0 }}>My things</p>} title="My things"
-        sub={<Meta who={me.name} facts={[countLine(data.made.length, data.copies.length)]} />} />
+        sub={<Meta who={displayName(me)} facts={[countLine(data.made.length, data.copies.length)]} />} />
       <Main>
         <TwoUp
           left={<div style={s('display:flex;flex-direction:column;gap:20px')}>
@@ -92,11 +92,10 @@ function MyThingsPage() {
                     </span>
                     <span className="small">Copied {readableAgo(copy.created_at).toLowerCase()}, not sent back</span>
                   </span>
-                  {project ? (
-                    <span style={s('display:flex;flex-direction:column;gap:10px;align-items:flex-start;flex:none')}>
-                      <Link className="ghost" to={`/p/${project.slug}`}>See the original</Link>
-                    </span>
-                  ) : null}
+                  <span style={s('display:flex;flex-direction:column;gap:10px;align-items:flex-start;flex:none')}>
+                    <Link className="ghost" to={`/copies/${copy.id}`}>Open</Link>
+                    <Link className="nav" to={`/copies/${copy.id}/change`} style={{ minHeight: 0 }}>Change it</Link>
+                  </span>
                 </div>
               )) : null}
               {showMade && data.made.length === 0 ? <p className="body" style={{ padding: '24px 0', margin: 0 }}>You have not shared anything yet.</p> : null}

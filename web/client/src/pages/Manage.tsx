@@ -98,6 +98,12 @@ function ManagePage() {
             </Box>
           </>}
           right={<>
+            <Box title="Change it">
+              <div style={s('display:flex;flex-direction:column;gap:14px;margin-top:-4px')}>
+                <Link className="btn" to={`/my-things/${slug}/change`} style={s('width:100%;box-sizing:border-box')}>Change it by chatting</Link>
+                <span className="small">Say what you want it to do differently. Every change you keep becomes a new version, and nobody is moved onto it against their will.</span>
+              </div>
+            </Box>
             <div className="panel" style={s('display:flex;flex-direction:column;gap:6px;padding:28px')}>
               <h2 className="h2" style={{ marginBottom: 10 }}>Who can see it</h2>
               <div role="radiogroup" aria-label="Who can see it" aria-busy={saving}>

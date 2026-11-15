@@ -53,7 +53,6 @@ Making a copy was already there (`POST /api/projects/:slug/copies`). A copy now 
 
 | Request | Does |
 |---|---|
-| `GET /api/copies/:id` | The copy, "Copied from" (project, maker, version), and its newest version |
 | `GET /api/copies/:id/versions` | Every version, newest first |
 | `POST /api/copies/:id/versions` (zip in `file`, plus `note`) | Saves the next version |
 | `POST /api/copies/:id/versions/:n/restore` | Goes back to version n by adding a new version |
@@ -66,16 +65,17 @@ Making a copy was already there (`POST /api/projects/:slug/copies`). A copy now 
 
 ## Task 4: saved chats
 
-| Request | Does |
-|---|---|
-| `GET /api/copies/:id/chat` | Everything said about this copy so far |
-| `POST /api/copies/:id/chat` `{ message, confirm_private? }` | Sends a message to Claude and saves the exchange |
+Chatting uses Yash's routes and pages unchanged (`/api/projects/:slug/chats`, `/api/copies/:id/chats`, `/api/chats/:id/...`). Saving sits underneath them:
 
-- **One conversation per person, per copy.** A copy belongs to one person, so chats never mix.
-- **Every change becomes a version** of the copy, labelled "You asked: …".
-- **Picking up where they left off.** The chat service's sessions are temporary. When one is gone, or the copy was changed another way (such as going back a version), a new session starts from the copy's newest code and the saved conversation. Claude gets the last 60 messages and reads the files again.
-- **Privacy reminder.** If a message looks private, nothing is sent to Claude and nothing is saved until the person confirms.
+- **Stored in the database:** which chat is whose, everything that was said, the list of changes, and the code as the chat last left it.
+- **Picking up where they left off.** The chat service forgets a chat after an hour or a restart. When that happens, the chat is started again from the saved code and conversation, and the person carries on. Before, it answered "this chat has ended".
+- **Same chat on any computer.** Opening the chat again for the same project or copy returns the saved one. A new version of the project starts a fresh chat.
+- **Messages in the reply.** `GET /api/chats/:id` and the start routes now also return `messages`, so a page can show the conversation again.
+- **Keeping a change on a copy** adds a version to the copy's history, named after what was asked.
+- **Privacy reminder.** Nothing is saved when a message was held back.
 - **Chat service change:** `POST /sessions` accepts an `earlier` field holding the saved conversation.
+
+Limit: a change made before the chat was last picked up again is still listed, but can't be gone back to from the chat.
 
 ## Task 5: home page shelves
 
@@ -109,7 +109,7 @@ Five new migrations, applied in order by `npm run migrate`:
 |---|---|
 | `006_passwords.sql` | `users.username`, `users.email_verified_at`, the `passwords` table |
 | `007_copy_versions.sql` | `versions.copy_id` and `versions.restored_from`; a version may belong to a copy |
-| `008_copy_chats.sql` | `chat_messages`, `chat_sessions` |
+| `008_copy_chats.sql` | `chats`, `chat_messages` |
 | `009_shelves.sql` | `picks`, `lists`, `list_items` |
 | `010_questions.sql` | `questions` |
 
@@ -148,5 +148,5 @@ Everything else is in new files.
 5. **Protect stored code.** Code zips are reachable by anyone who has their long, unguessable link. A private copy's code needs signed, expiring links to be truly private.
 6. **Build drafts of copies.** A copy's versions are stored, but nothing builds them into downloads yet, so "try a draft on your own files" isn't possible.
 7. **Save the leaked-keys result.** The Analyzer reports it (PR #5), but the pipeline doesn't store it, so "Checked for leaked keys" can only reflect the overall check.
-8. **Let a maker chat about their own project.** Only copies can be changed by chat so far.
+8. **Show the saved conversation on the chat page.** The API returns `messages`; the page doesn't display them yet.
 9. **Limit how often people can sign up, ask and chat.** Only password tries and waiting questions are limited today.

@@ -69,6 +69,15 @@ export async function byId(db: Db, id: string): Promise<Version | null> {
   return one(await db.query<Version>('select * from versions where id = $1 and project_id is not null', [id]))
 }
 
+/** A version made before its files were known, as taking a suggestion does, gets them here. */
+export async function setSource(db: Db, versionId: string, sourceZipUrl: string, buildId: string): Promise<void> {
+  await db.query('update versions set source_zip_url = $2, build_id = $3 where id = $1', [
+    versionId,
+    sourceZipUrl,
+    buildId,
+  ])
+}
+
 export async function setBuildId(db: Db, versionId: string, buildId: string): Promise<void> {
   await db.query('update versions set build_id = $2 where id = $1', [versionId, buildId])
 }

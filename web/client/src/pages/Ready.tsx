@@ -151,6 +151,9 @@ function ReadyPage() {
               <Choice title="Change who can see it" body="Take it back to private at any time, or open it up to everyone.">
                 <Link className="ghost" to={`/my-things/${slug}`}>Sharing</Link>
               </Choice>
+              <Choice title="Change how it works" body="Ask for a change in your own words. Every change you keep becomes a new version.">
+                <Link className="ghost" to={`/my-things/${slug}/change`}>Change it</Link>
+              </Choice>
               <Choice title="See what people send you" body="People who use it can suggest changes. You decide what to keep.">
                 <Link className="ghost" to={`/my-things/${slug}/suggestions`}>Suggestions</Link>
               </Choice>

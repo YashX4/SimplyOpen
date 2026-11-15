@@ -1,9 +1,8 @@
 /**
  * A person's own copy of a project, and its version history. Making the
  * copy is in suggestions.ts (POST /api/projects/:slug/copies); this is
- * everything after that.
+ * its version history. (The copy itself, and chatting about it, are in chat.ts.)
  *
- * - GET  /api/copies/:id                         the copy, "Copied from", and its newest version
  * - GET  /api/copies/:id/versions                every version, newest first
  * - POST /api/copies/:id/versions                multipart: "file" (zip of the code), "note" → 201 the new version
  * - POST /api/copies/:id/versions/:n/restore     go back to version n, as a new version
@@ -50,14 +49,6 @@ export async function registerCopies(app: FastifyInstance, deps: AppDeps): Promi
 
   type WithId = { Params: { id: string } }
   type WithNumber = { Params: { id: string; n: string } }
-
-  app.get<WithId>('/api/copies/:id', async (request, reply) => {
-    const copy = await myCopy(request, reply)
-    if (!copy) return reply
-    const detail = await copies.detail(deps.db, copy)
-    if (!detail) return fail(reply, 404, 'NO_SUCH_COPY', 'There is no copy with that id.')
-    return reply.send(detail)
-  })
 
   app.get<WithId>('/api/copies/:id/versions', async (request, reply) => {
     const copy = await myCopy(request, reply)

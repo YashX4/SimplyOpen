@@ -1,230 +1,295 @@
-/**
- * Changing a copy by talking: the conversation is kept, the AI picks up
- * where the person left off, and every change becomes a version. The chat
- * service itself is replaced by a fake that records what it was asked.
- */
-
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { buildApp } from '../src/app.js'
-import { ChatUnavailable, type ChatAnswer, type ChatService, type EarlierMessage } from '../src/services/chat.js'
+import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { harness, type Harness } from './helpers.js'
-
-const DEMO = 'zoom-transcripts-to-nvivo'
-const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
-const text = (data: Uint8Array | undefined): string => new TextDecoder().decode(data)
-
-/** What the fake chat service does with the next message. */
-type Next = { reply: string; newCode?: string; ready?: boolean } | 'privacy' | 'busy' | 'fail'
-
-class FakeChat implements ChatService {
-  /** Live sessions: id → the code they hold. Deleting one makes it "expire". */
-  readonly sessions = new Map<string, string>()
-  readonly started: { code: string; earlier: EarlierMessage[] }[] = []
-  readonly sent: { sessionId: string; message: string; confirmPrivate: boolean }[] = []
-  next: Next[] = []
-
-  async start(zip: Uint8Array, earlier: EarlierMessage[]): Promise<string> {
-    const id = `session-${this.started.length + 1}`
-    this.sessions.set(id, text(zip))
-    this.started.push({ code: text(zip), earlier })
-    return id
-  }
-
-  async send(sessionId: string, message: string, confirmPrivate: boolean): Promise<ChatAnswer | 'gone' | 'busy'> {
-    if (!this.sessions.has(sessionId)) return 'gone'
-    this.sent.push({ sessionId, message, confirmPrivate })
-    const next = this.next.shift() ?? { reply: 'ok' }
-    if (next === 'busy') return 'busy'
-    if (next === 'fail') throw new ChatUnavailable()
-    if (next === 'privacy') return { kind: 'privacy_reminder', reminder: 'Before I send this…', found: ['an email address'] }
-    if (next.newCode !== undefined) this.sessions.set(sessionId, next.newCode)
-    return {
-      kind: 'reply',
-      reply: next.reply,
-      changed: next.newCode !== undefined,
-      label: next.newCode !== undefined ? `You asked: ${message}` : null,
-      ready_to_download: next.ready === true,
-      stopped_early: false,
-    }
-  }
-
-  async zip(sessionId: string): Promise<Uint8Array> {
-    return bytes(this.sessions.get(sessionId) ?? '')
-  }
-}
+import * as projects from '../src/repo/projects.js'
+import * as suggestions from '../src/repo/suggestions.js'
+import * as users from '../src/repo/users.js'
+import * as versions from '../src/repo/versions.js'
 
 let h: Harness
-let app: Awaited<ReturnType<typeof buildApp>>
-let chat: FakeChat
-let me: { id: string; cookie: string }
-let copyId: string
+const SLUG = 'zoom-transcripts-to-nvivo'
+const SOURCE = new TextEncoder().encode('the original files')
 
 beforeEach(async () => {
   h = await harness()
-  chat = new FakeChat()
-  app = await buildApp({ db: h.db, analyzer: h.analyzer, storage: h.storage, factory: h.factory, mailer: h.mailer, chat })
-  // Give the demo's newest version some code, so a copy of it can be changed.
-  const stored = await h.storage.put('uploads/demo/project.zip', bytes('code v1'), 'application/zip')
-  await h.db.query(
-    'update versions set source_zip_url = $2 where number = 5 and project_id = (select id from projects where slug = $1)',
-    [DEMO, stored.url],
-  )
-  me = await h.signIn('me@example.com', 'Me')
-  copyId = await copyFor(me.cookie)
+  // The seeded version has no files kept with it; give it some, as an upload would.
+  const project = await projects.bySlug(h.db, SLUG)
+  const latest = await versions.latest(h.db, project!.id)
+  const stored = await h.storage.put('uploads/seed/project.zip', SOURCE, 'application/zip')
+  await h.db.query('update versions set source_zip_url = $2 where id = $1', [latest!.id, stored.url])
 })
-afterEach(async () => {
-  await app.close()
-  await h.close()
-})
+afterEach(async () => { await h.close() })
 
-async function copyFor(cookie: string): Promise<string> {
-  return (await app.inject({ method: 'POST', url: `/api/projects/${DEMO}/copies`, headers: { cookie }, payload: {} })).json().copy.id
+async function priya() {
+  const project = await projects.bySlug(h.db, SLUG)
+  const row = await h.db.query<{ email: string }>('select email from users where id = $1', [project!.owner])
+  const done = await users.completeSignIn(h.db, await users.startSignIn(h.db, row.rows[0]!.email))
+  return { cookie: `so_session=${done!.session}`, project: project! }
 }
 
-const say = (message: unknown, extra: object = {}, cookie = me.cookie, id = copyId) =>
-  app.inject({ method: 'POST', url: `/api/copies/${id}/chat`, headers: { cookie }, payload: { message, ...extra } as object })
-const saved = async (cookie = me.cookie, id = copyId) =>
-  (await app.inject({ method: 'GET', url: `/api/copies/${id}/chat`, headers: { cookie } })).json().messages as {
-    role: string; text: string; version_number: number | null
-  }[]
-const versions = async () =>
-  (await app.inject({ method: 'GET', url: `/api/copies/${copyId}/versions`, headers: { cookie: me.cookie } })).json().versions as {
-    number: number; note: string; source_zip_url: string
-  }[]
+const post = (url: string, cookie: string, payload: object = {}) =>
+  h.app.inject({ method: 'POST', url, headers: { cookie }, payload })
 
-describe('chatting about a copy', () => {
-  it('starts the AI on the copy\'s code, and saves what was said', async () => {
-    chat.next = [{ reply: 'Which colour would you like?' }]
-    const reply = await say('Change the colour')
-    expect(reply.statusCode).toBe(200)
-    expect(reply.json()).toMatchObject({ kind: 'reply', reply: 'Which colour would you like?', version: null, ready_to_download: null })
-
-    expect(chat.started).toEqual([{ code: 'code v1', earlier: [] }])
-    expect(await saved()).toMatchObject([
-      { role: 'you', text: 'Change the colour', version_number: null },
-      { role: 'assistant', text: 'Which colour would you like?', version_number: null },
-    ])
-    expect(await versions()).toHaveLength(1) // a question back changes nothing
+describe('the maker changing it by chatting', () => {
+  it('starts from the newest version’s own files', async () => {
+    const { cookie } = await priya()
+    const res = await post(`/api/projects/${SLUG}/chats`, cookie)
+    expect(res.statusCode).toBe(201)
+    expect(res.json().chat.kind).toBe('maker')
+    expect(res.json().chat.from_version).toBe(5)
+    expect(new TextDecoder().decode(h.chat.started[0])).toBe('the original files')
   })
 
-  it('every change the person asks for becomes a version, with its code stored', async () => {
-    chat.next = [{ reply: 'The walls are blue now.', newCode: 'code v2' }, { reply: 'Bigger now.', newCode: 'code v3' }]
-    const first = await say('Make the walls blue')
-    expect(first.json().version).toMatchObject({ number: 2, note: 'You asked: Make the walls blue' })
-    await say('Make the button bigger')
+  it('is only for the person who made it', async () => {
+    const other = await h.signIn('someone@example.ac.uk', 'Someone')
+    expect((await post(`/api/projects/${SLUG}/chats`, other.cookie)).statusCode).toBe(403)
+  })
 
-    const all = await versions()
-    expect(all.map((v) => [v.number, v.note])).toEqual([
-      [3, 'You asked: Make the button bigger'],
-      [2, 'You asked: Make the walls blue'],
+  it('passes messages through, and the privacy reminder back', async () => {
+    const { cookie } = await priya()
+    const id = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
+    const changed = await post(`/api/chats/${id}/messages`, cookie, { message: 'please change the folder' })
+    expect(changed.json().kind).toBe('reply')
+    expect(changed.json().version.number).toBe(1)
+    const careful = await post(`/api/chats/${id}/messages`, cookie, { message: 'email it to a@b.co' })
+    expect(careful.json().kind).toBe('privacy_reminder')
+  })
+
+  it('a stranger cannot read or write somebody else’s chat', async () => {
+    const { cookie } = await priya()
+    const id = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
+    const other = await h.signIn('someone@example.ac.uk', 'Someone')
+    expect((await post(`/api/chats/${id}/messages`, other.cookie, { message: 'change it' })).statusCode).toBe(410)
+    expect((await h.app.inject({ method: 'GET', url: `/api/chats/${id}`, headers: { cookie: other.cookie } })).statusCode).toBe(410)
+  })
+
+  it('making it a version builds it like an upload, with their note', async () => {
+    const { cookie, project } = await priya()
+    const id = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'please change the folder' })
+    const made = await post(`/api/chats/${id}/release`, cookie, { note: 'Files go where you choose.' })
+    expect(made.statusCode).toBe(201)
+    expect(made.json().version.number).toBe(6)
+    const latest = await versions.latest(h.db, project.id)
+    expect(latest!.note).toBe('Files go where you choose.')
+    expect(latest!.source_zip_url).toBeTruthy()
+    expect(h.factory.dispatched).toHaveLength(1)
+    const page = await h.app.inject({ method: 'GET', url: `/api/projects/${SLUG}` })
+    expect(page.json().builds).toHaveLength(3)
+  })
+
+  it('starting again carries on the chat that was already going', async () => {
+    const { cookie } = await priya()
+    const first = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
+    const again = await post(`/api/projects/${SLUG}/chats`, cookie)
+    expect(again.json().chat.id).toBe(first)
+    expect(h.chat.sessions.size).toBe(1)
+    expect((await post(`/api/chats/${first}/messages`, cookie, { message: 'change it' })).statusCode).toBe(200)
+  })
+
+  it('a new version of the project means the next chat starts afresh', async () => {
+    const { cookie, project } = await priya()
+    const first = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
+    const stored = await h.storage.put('uploads/next/project.zip', new TextEncoder().encode('version six'), 'application/zip')
+    await versions.append(h.db, { project_id: project.id, note: 'Sixth.', created_by: project.owner, source_zip_url: stored.url })
+    const next = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat
+    expect(next.id).not.toBe(first)
+    expect(next.from_version).toBe(6)
+    expect(new TextDecoder().decode(h.chat.started.at(-1))).toBe('version six')
+    expect((await post(`/api/chats/${first}/messages`, cookie, { message: 'change it' })).statusCode).toBe(410)
+  })
+
+  it('says the chat has ended only when it is gone for good', async () => {
+    const { cookie } = await priya()
+    const id = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id
+    await h.app.inject({ method: 'DELETE', url: `/api/chats/${id}`, headers: { cookie } })
+    const res = await post(`/api/chats/${id}/messages`, cookie, { message: 'change it' })
+    expect(res.statusCode).toBe(410)
+    expect(res.json().error.code).toBe('CHAT_ENDED')
+  })
+})
+
+describe('a chat that lasts', () => {
+  const get = (url: string, cookie: string) => h.app.inject({ method: 'GET', url, headers: { cookie } })
+  const text = (bytes: Uint8Array | undefined) => new TextDecoder().decode(bytes)
+  const start = async () => {
+    const { cookie } = await priya()
+    const id = (await post(`/api/projects/${SLUG}/chats`, cookie)).json().chat.id as string
+    return { cookie, id }
+  }
+
+  it('keeps everything that was said', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'what did you do?' })
+    expect((await get(`/api/chats/${id}`, cookie)).json().messages).toMatchObject([
+      { role: 'you', text: 'change the colour', version_number: null },
+      { role: 'assistant', text: 'Done.', version_number: 1 },
+      { role: 'you', text: 'what did you do?', version_number: null },
+      { role: 'assistant', text: 'No, I cannot do that one.', version_number: null },
+    ])
+  })
+
+  it('the privacy reminder is not saved, because nothing was sent', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change it for jane@example.com' })
+    expect((await get(`/api/chats/${id}`, cookie)).json().messages).toEqual([])
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change it for jane@example.com', confirmPrivate: true })
+    expect((await get(`/api/chats/${id}`, cookie)).json().messages).toHaveLength(2)
+  })
+
+  it('is picked up where it was left when the chat service has forgotten it', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    h.chat.sessions.clear() // an hour passed, or the chat service restarted
+
+    const res = await post(`/api/chats/${id}/messages`, cookie, { message: 'change the size' })
+    expect(res.statusCode).toBe(200)
+    // It was started again from the code the chat last left, already knowing what was said.
+    expect(text(h.chat.started[1])).toBe('changed 1')
+    expect(h.chat.earlier[1]).toEqual([
+      { role: 'user', text: 'change the colour' },
+      { role: 'assistant', text: 'Done.' },
+    ])
+    // Changes keep counting up from where they were, and the earlier one is still listed.
+    expect(res.json().version).toMatchObject({ number: 2, label: 'You asked: change the size' })
+    const page = (await get(`/api/chats/${id}`, cookie)).json()
+    expect(page.versions.map((v: { number: number; label: string }) => [v.number, v.label])).toEqual([
+      [0, 'Your copy'],
+      [1, 'You asked: change the colour'],
+      [2, 'You asked: change the size'],
+    ])
+    expect(page.messages).toHaveLength(4)
+  })
+
+  it('opening the page again, or on another computer, finds the same chat', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    h.chat.sessions.clear()
+
+    const again = (await post(`/api/projects/${SLUG}/chats`, cookie)).json()
+    expect(again.chat.id).toBe(id)
+    expect(again.versions.map((v: { number: number }) => v.number)).toEqual([0, 1])
+    expect(again.messages).toHaveLength(2)
+    expect(text(h.chat.started.at(-1))).toBe('changed 1')
+  })
+
+  it('undo and going back are saved too, and work after being picked up again', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change one' })
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change two' })
+    h.chat.sessions.clear()
+
+    expect((await post(`/api/chats/${id}/undo`, cookie)).json().version).toMatchObject({ number: 3 })
+    expect((await post(`/api/chats/${id}/versions/3/restore`, cookie)).json().version).toMatchObject({ number: 4 })
+    // A change from before it was picked up again is listed, but can no longer be gone back to.
+    const tooFar = await post(`/api/chats/${id}/versions/1/restore`, cookie)
+    expect([tooFar.statusCode, tooFar.json().error.code]).toEqual([409, 'TOO_FAR_BACK'])
+    expect((await get(`/api/chats/${id}`, cookie)).json().versions.map((v: { number: number }) => v.number)).toEqual([0, 1, 2, 3, 4])
+  })
+
+  it('making it a version uses the picked-up code', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    h.chat.sessions.clear()
+    const made = await post(`/api/chats/${id}/release`, cookie, { note: 'A new colour.' })
+    expect(made.statusCode).toBe(201)
+    expect(text(h.chat.started.at(-1))).toBe('changed 1')
+  })
+
+  it('each person has their own chat about the same project', async () => {
+    const a = await h.signIn('a@example.com')
+    const b = await h.signIn('b@example.com')
+    const chatOf = async (who: { cookie: string }) => {
+      const copy = (await post(`/api/projects/${SLUG}/copies`, who.cookie)).json().copy.id
+      return (await post(`/api/copies/${copy}/chats`, who.cookie)).json().chat.id as string
+    }
+    const [mine, theirs] = [await chatOf(a), await chatOf(b)]
+    await post(`/api/chats/${mine}/messages`, a.cookie, { message: 'change it to blue' })
+    expect((await get(`/api/chats/${theirs}`, b.cookie)).json().messages).toEqual([])
+    expect((await get(`/api/chats/${mine}`, b.cookie)).statusCode).toBe(410)
+  })
+
+  it('ending a chat removes what was saved of it', async () => {
+    const { cookie, id } = await start()
+    await post(`/api/chats/${id}/messages`, cookie, { message: 'change the colour' })
+    await h.app.inject({ method: 'DELETE', url: `/api/chats/${id}`, headers: { cookie } })
+    expect((await h.db.query('select 1 from chats')).rows).toHaveLength(0)
+    expect((await h.db.query('select 1 from chat_messages')).rows).toHaveLength(0)
+  })
+
+  it('says so when the saved files have gone and it cannot be picked up', async () => {
+    const { cookie, id } = await start()
+    h.chat.sessions.clear()
+    h.storage.files.clear()
+    const res = await post(`/api/chats/${id}/messages`, cookie, { message: 'change it' })
+    expect([res.statusCode, res.json().error.code]).toEqual([409, 'NO_SOURCE'])
+  })
+})
+
+describe('a copy, changed and offered back', () => {
+  async function copied() {
+    const them = await h.signIn('tomas@example.ac.uk', 'Tomás Medina')
+    const copy = (await post(`/api/projects/${SLUG}/copies`, them.cookie)).json().copy as { id: string }
+    const chat = (await post(`/api/copies/${copy.id}/chats`, them.cookie)).json().chat as { id: string; kind: string }
+    return { them, copy, chat }
+  }
+
+  it('starts from the version it was copied from', async () => {
+    const { chat } = await copied()
+    expect(chat.kind).toBe('copy')
+    expect(new TextDecoder().decode(h.chat.started[0])).toBe('the original files')
+  })
+
+  it('keeping a change stores the copy’s own files, which outlive the chat', async () => {
+    const { them, copy, chat } = await copied()
+    await post(`/api/chats/${chat.id}/messages`, them.cookie, { message: 'change the spreadsheet' })
+    expect((await post(`/api/chats/${chat.id}/keep`, them.cookie)).statusCode).toBe(200)
+    const after = await suggestions.copyById(h.db, copy.id)
+    expect(after!.working_zip_url).toBeTruthy()
+    // It became the next version in the copy's own history, named after what was asked.
+    const history = (await h.app.inject({ method: 'GET', url: `/api/copies/${copy.id}/versions`, headers: { cookie: them.cookie } })).json().versions
+    expect(history.map((v: { number: number; note: string }) => [v.number, v.note])).toEqual([
+      [2, 'You asked: change the spreadsheet'],
       [1, 'Copied from version 5 of Zoom transcripts to NVivo.'],
     ])
-    const codeOf = (url: string) => text([...h.storage.files].find(([path]) => h.storage.urlFor(path) === url)?.[1].bytes)
-    expect([codeOf(all[0]!.source_zip_url), codeOf(all[1]!.source_zip_url)]).toEqual(['code v3', 'code v2'])
-    expect((await saved()).map((m) => m.version_number)).toEqual([null, 2, null, 3])
-    expect(chat.started).toHaveLength(1) // one session served both messages
+    // A later chat on the copy starts from where it got to.
+    h.chat.sessions.clear()
+    await post(`/api/copies/${copy.id}/chats`, them.cookie)
+    expect(new TextDecoder().decode(h.chat.started[1])).toBe('changed 1')
   })
 
-  it('picks up where they left off after the AI\'s session is gone', async () => {
-    chat.next = [{ reply: 'The walls are blue now.', newCode: 'code v2' }]
-    await say('Make the walls blue')
-    chat.sessions.clear() // the chat service restarted, or the session expired
+  it('cannot be made a version by the person who copied it', async () => {
+    const { them, chat } = await copied()
+    expect((await post(`/api/chats/${chat.id}/release`, them.cookie, { note: 'mine' })).statusCode).toBe(403)
+  })
 
-    chat.next = [{ reply: 'They are blue, as you asked before.' }]
-    expect((await say('What colour are the walls?')).json().reply).toBe('They are blue, as you asked before.')
-
-    // A new session, started from the newest code and the saved conversation.
-    expect(chat.started[1]).toEqual({
-      code: 'code v2',
-      earlier: [
-        { role: 'user', text: 'Make the walls blue' },
-        { role: 'assistant', text: 'The walls are blue now.' },
-      ],
+  it('suggesting it back, then the maker taking it, builds the copy’s files', async () => {
+    const { them, chat } = await copied()
+    await post(`/api/chats/${chat.id}/messages`, them.cookie, { message: 'change the spreadsheet' })
+    const sent = await post(`/api/chats/${chat.id}/suggest`, them.cookie, {
+      note: 'Saves me a step.', changes: [{ title: 'It saves a spreadsheet as well.' }],
     })
-    expect(await saved()).toHaveLength(4)
+    expect(sent.statusCode).toBe(201)
+    const id = sent.json().suggestion.id as string
+
+    const { cookie } = await priya()
+    const taken = await post(`/api/suggestions/${id}/take`, cookie, { note: 'Also saves a spreadsheet.' })
+    expect(taken.statusCode).toBe(200)
+    expect(taken.json().built).toBe(true)
+    expect(h.factory.dispatched).toHaveLength(1)
+    const detail = await h.app.inject({ method: 'GET', url: `/api/versions/${taken.json().version.id}` })
+    expect(detail.json().builds).toHaveLength(3)
+    expect(detail.json().version.source_zip_url).toBeTruthy()
   })
 
-  it('after going back a version, the AI works on that version\'s code', async () => {
-    chat.next = [{ reply: 'Blue.', newCode: 'code v2' }]
-    await say('Make the walls blue')
-    await app.inject({ method: 'POST', url: `/api/copies/${copyId}/versions/1/restore`, headers: { cookie: me.cookie } })
-
-    chat.next = [{ reply: 'Green.', newCode: 'code v4' }]
-    expect((await say('Make them green')).json().version).toMatchObject({ number: 4 })
-    expect(chat.started[1]!.code).toBe('code v1') // not the blue code the old session still held
-    expect(chat.sent.at(-1)!.sessionId).toBe('session-2')
-  })
-
-  it('when they say they are happy, the newest version is offered as a download', async () => {
-    chat.next = [{ reply: 'Blue.', newCode: 'code v2' }, { reply: 'Here is your download.', ready: true }]
-    await say('Make the walls blue')
-    expect((await say('Perfect, I will take it')).json()).toMatchObject({ ready_to_download: 2, version: null })
-  })
-
-  it('a private-looking message gets the reminder, and nothing is saved until they confirm', async () => {
-    chat.next = ['privacy', { reply: 'ok' }]
-    const reminder = await say('Email it to jane@example.com')
-    expect(reminder.json()).toEqual({ kind: 'privacy_reminder', reminder: 'Before I send this…', found: ['an email address'] })
-    expect(await saved()).toEqual([])
-
-    await say('Email it to jane@example.com', { confirm_private: true })
-    expect(chat.sent.map((s) => s.confirmPrivate)).toEqual([false, true])
-    expect(await saved()).toHaveLength(2)
-  })
-})
-
-describe('each person\'s chat is their own', () => {
-  it('two people with copies of the same project never see each other\'s conversation', async () => {
-    const other = await h.signIn('other@example.com')
-    const otherCopy = await copyFor(other.cookie)
-    chat.next = [{ reply: 'Blue for you.', newCode: 'mine' }, { reply: 'Red for you.', newCode: 'theirs' }]
-    await say('Make it blue')
-    await say('Make it red', {}, other.cookie, otherCopy)
-
-    expect((await saved()).map((m) => m.text)).toEqual(['Make it blue', 'Blue for you.'])
-    expect((await saved(other.cookie, otherCopy)).map((m) => m.text)).toEqual(['Make it red', 'Red for you.'])
-    expect(chat.started).toHaveLength(2) // a session each
-  })
-
-  it('someone else\'s copy does not exist, to read or to write', async () => {
-    const other = await h.signIn('other@example.com')
-    await say('Make it blue')
-    for (const reply of [
-      await app.inject({ method: 'GET', url: `/api/copies/${copyId}/chat`, headers: { cookie: other.cookie } }),
-      await say('Let me in', {}, other.cookie),
-    ]) {
-      expect([reply.statusCode, reply.json().error.code]).toEqual([404, 'NO_SUCH_COPY'])
-    }
-    expect((await app.inject({ method: 'GET', url: `/api/copies/${copyId}/chat` })).statusCode).toBe(401)
-    expect(chat.sent).toHaveLength(1)
-  })
-})
-
-describe('when things go wrong', () => {
-  it.each([
-    ['an empty message', '   ', 400, 'NO_MESSAGE'],
-    ['a message that is not text', 5, 400, 'NO_MESSAGE'],
-    ['a message that is too long', 'x'.repeat(4001), 400, 'MESSAGE_TOO_LONG'],
-  ])('refuses %s', async (_label, message, status, code) => {
-    const reply = await say(message)
-    expect([reply.statusCode, reply.json().error.code]).toEqual([status, code])
-    expect(chat.started).toHaveLength(0)
-  })
-
-  it('says so when the AI is still busy, or the chat service is down, and saves nothing', async () => {
-    chat.next = ['busy', 'fail']
-    expect([(await say('one')).statusCode, (await say('two')).statusCode]).toEqual([409, 502])
-    expect(await saved()).toEqual([])
-  })
-
-  it('a copy with no stored code cannot be changed', async () => {
-    const empty = (await app.inject({ method: 'POST', url: `/api/projects/${DEMO}/copies`, headers: { cookie: me.cookie }, payload: { version: 1 } })).json().copy.id
-    const reply = await say('Change it', {}, me.cookie, empty)
-    expect([reply.statusCode, reply.json().error.code]).toEqual([409, 'NO_CODE'])
-  })
-
-  it('answers 503 when no chat service is set up', async () => {
-    const reply = await h.app.inject({ method: 'POST', url: `/api/copies/${copyId}/chat`, headers: { cookie: me.cookie }, payload: { message: 'hi' } })
-    expect([reply.statusCode, reply.json().error.code]).toEqual([503, 'CHAT_NOT_SET_UP'])
+  it('shows its owner the copy, and what was sent from it', async () => {
+    const { them, copy, chat } = await copied()
+    await post(`/api/chats/${chat.id}/messages`, them.cookie, { message: 'change the spreadsheet' })
+    await post(`/api/chats/${chat.id}/suggest`, them.cookie, { changes: [{ title: 'A spreadsheet.' }] })
+    const res = await h.app.inject({ method: 'GET', url: `/api/copies/${copy.id}`, headers: { cookie: them.cookie } })
+    expect(res.json().copy.changed).toBe(true)
+    expect(res.json().project.maker).toBe('Priya Raman')
+    expect(res.json().suggestions).toHaveLength(1)
+    expect(res.json().chat.id).toBe(chat.id)
   })
 })

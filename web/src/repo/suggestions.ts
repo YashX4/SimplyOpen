@@ -26,6 +26,11 @@ export async function copiesOf(db: Db, owner: string): Promise<Copy[]> {
   return rows
 }
 
+/** Where a copy's own files are, once its owner has kept a change. */
+export async function setWorkingZip(db: Db, copyId: string, url: string): Promise<void> {
+  await db.query('update copies set working_zip_url = $2 where id = $1', [copyId, url])
+}
+
 export async function copyById(db: Db, id: string): Promise<Copy | null> {
   return one(await db.query<Copy>('select * from copies where id = $1', [id]))
 }

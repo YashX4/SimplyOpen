@@ -158,11 +158,11 @@ function Doors({ page, onStars }: { page: ProjectPage; onStars: (n: number) => v
         </button>
       </div>
       <div className="row2" style={{ alignItems: 'center' }}>
-        <span className="body" style={{ color: '#091717', flex: 1 }}>Make my own copy</span>
-        <button type="button" className="nav" style={link}
-          onClick={act(async () => { await api.copy(slug); setSaid('Copied. It is in My things.') })}>
-          Copy
-        </button>
+        <span className="body" style={{ color: '#091717', flex: 1 }}>{page.can_edit ? 'Change it by chatting' : 'Make my own copy'}</span>
+        <Link className="nav" style={{ minHeight: 44 }}
+          to={page.can_edit ? `/my-things/${slug}/change` : `/p/${slug}/copy`}>
+          {page.can_edit ? 'Change it' : 'Copy'}
+        </Link>
       </div>
       {said ? <p className="small" role="status" style={{ margin: '10px 0 0' }}>{said}</p> : null}
     </div>
