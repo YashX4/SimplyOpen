@@ -17,10 +17,18 @@ export interface ProjectSummary {
   systems: string[]
   /** The newest picture of the app's real window, if any version has one. */
   picture_url: string | null
+  /**
+   * On the team's front row of the home page: shared by someone on the team,
+   * or picked by them. Only an address its owner has proved counts, so
+   * signing up with a team address is not enough. Browse only.
+   */
+  featured?: boolean
 }
 
 /** Everything browse shows. Public only, newest change first. */
-export async function listPublic(db: Db, limit = 24, offset = 0): Promise<ProjectSummary[]> {
+export async function listPublic(
+  db: Db, limit = 24, offset = 0, teamEmails: readonly string[] = [],
+): Promise<ProjectSummary[]> {
   const { rows } = await db.query<ProjectSummary>(
     `select p.slug, p.name, p.description, u.name as owner_name,
             v.number as version_number, v.note, v.created_at as updated_at,
@@ -31,7 +39,9 @@ export async function listPublic(db: Db, limit = 24, offset = 0): Promise<Projec
             (select count(*)::int from stars s where s.project_id = p.id) as stars,
             (select pv.picture_url from versions pv
                where pv.project_id = p.id and pv.picture_url is not null
-               order by pv.number desc limit 1) as picture_url
+               order by pv.number desc limit 1) as picture_url,
+            (exists (select 1 from picks k where k.project_id = p.id)
+              or (u.email_verified_at is not null and lower(u.email) = any($3::text[]))) as featured
      from projects p
      join users u on u.id = p.owner
      join lateral (
@@ -41,7 +51,7 @@ export async function listPublic(db: Db, limit = 24, offset = 0): Promise<Projec
      where p.visibility = 'public'
      order by v.created_at desc
      limit $1 offset $2`,
-    [limit, offset],
+    [limit, offset, teamEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)],
   )
   return rows
 }

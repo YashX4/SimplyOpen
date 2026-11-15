@@ -47,10 +47,13 @@ export function Browse() {
   }, [])
   useEffect(load, [load])
 
-  // The front row is what people have starred most. Whatever is left and
-  // was changed this week goes on the second row, so nothing shows twice.
+  // The front row is the team's: everything someone on the team shares, and
+  // anything they picked, newest first. Until there is any, it is what people
+  // have starred most. Whatever is left and was changed this week goes on the
+  // second row, so nothing shows twice.
   const all = projects ?? []
-  const picks = [...all].sort((a, b) => b.stars - a.stars).slice(0, 6)
+  const featured = all.filter((p) => p.featured)
+  const picks = featured.length > 0 ? featured.slice(0, 9) : [...all].sort((a, b) => b.stars - a.stars).slice(0, 6)
   const rest = all.filter((p) => !picks.includes(p))
   const fresh = rest.filter((p) => Date.now() - new Date(p.updated_at).getTime() < WEEK).slice(0, 8)
   const more = fresh.length > 0 ? fresh : rest.slice(0, 8)

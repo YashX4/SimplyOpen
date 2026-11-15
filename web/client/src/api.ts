@@ -23,6 +23,8 @@ export interface ProjectSummary {
   systems: Platform[]
   /** The newest picture of the app's real window, taken by the build. */
   picture_url: string | null
+  /** Shared or picked by someone on the team (browse only). */
+  featured?: boolean
 }
 
 export type Visibility = 'private' | 'link' | 'public'

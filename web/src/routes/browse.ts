@@ -10,7 +10,7 @@ export async function registerBrowse(app: FastifyInstance, deps: AppDeps): Promi
     async (request, reply) => {
       const limit = Math.min(Number(request.query.limit ?? 24) || 24, 60)
       const offset = Math.max(Number(request.query.offset ?? 0) || 0, 0)
-      return reply.send({ projects: await projects.listPublic(deps.db, limit, offset) })
+      return reply.send({ projects: await projects.listPublic(deps.db, limit, offset, deps.teamEmails ?? []) })
     },
   )
 

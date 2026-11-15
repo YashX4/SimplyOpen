@@ -167,6 +167,42 @@ describe('picks from the team', () => {
   })
 })
 
+describe('the team row on browse', () => {
+  const browse = async () =>
+    ((await app.inject({ method: 'GET', url: '/api/browse' })).json() as { projects: { slug: string; featured: boolean }[] }).projects
+  const featured = async () => (await browse()).filter((p) => p.featured).map((p) => p.slug)
+
+  /** A project with one version, made by `owner`. */
+  async function makeBy(owner: string, slug: string, visibility: 'public' | 'private' = 'public') {
+    const project = await projects.create(h.db, { owner, slug, name: slug, visibility })
+    await versions.append(h.db, { project_id: project.id, note: 'First version.', created_by: owner })
+  }
+
+  it('everything someone on the team shares is on it, with no picking needed, and only public things', async () => {
+    const team = await h.signIn('Team@SimplyOpen.example', 'Tess')
+    await h.db.query('update users set email_verified_at = now() where id = $1', [team.id])
+    await makeBy(team.id, 'ours')
+    await makeBy(team.id, 'ours-hidden', 'private')
+    await make('theirs')
+    expect(await featured()).toEqual(['ours'])
+    expect((await browse()).map((p) => p.slug)).not.toContain('ours-hidden')
+  })
+
+  it('an address only counts once its owner has proved it', async () => {
+    const made = await app.inject({ method: 'POST', url: '/api/auth/sign-up', payload: { username: 'sneaky', email: 'team@simplyopen.example', password: 'a long password' } })
+    await makeBy(made.json().user.id, 'sneaky-thing')
+    expect(await featured()).toEqual([])
+  })
+
+  it('a team pick is on it too, whoever made it', async () => {
+    const team = await h.signIn('team@simplyopen.example', 'Tess')
+    await h.db.query('update users set email_verified_at = now() where id = $1', [team.id])
+    await make('theirs')
+    await send('PUT', '/api/picks/theirs', team.cookie)
+    expect(await featured()).toEqual(['theirs'])
+  })
+})
+
 describe('lists made by people', () => {
   let priya: { id: string; cookie: string }
   let listId: string
