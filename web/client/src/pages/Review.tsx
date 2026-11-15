@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api, type ProjectPage, type Visibility } from '../api'
+import { api, type Build, type ProjectPage, type Visibility } from '../api'
 import { Main, Page, Plain, Trouble } from '../components/bits'
 import { tintFor } from '../components/Cover'
 import {
@@ -36,7 +36,14 @@ function problemsIn(page: ProjectPage): Problem[] {
   return out
 }
 
-function SmallCover({ slug }: { slug: string }) {
+function SmallCover({ slug, picture }: { slug: string; picture: string | null }) {
+  if (picture) {
+    return (
+      <div aria-hidden="true" style={s('flex:none;width:132px;height:92px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid rgba(9,23,23,0.12)')}>
+        <img src={picture} alt="" style={s('display:block;width:100%;height:100%;object-fit:cover;object-position:top')} />
+      </div>
+    )
+  }
   return (
     <div aria-hidden="true" style={s('flex:none;width:132px;height:92px;border-radius:12px;overflow:hidden;background:linear-gradient(162deg,#f2f3f0 0%,#e4e7e4 100%);display:flex;align-items:center;justify-content:center')}>
       <div style={s('width:84px;height:58px;border-radius:7px;background:#fff;border:1px solid rgba(9,23,23,0.12);box-shadow:0 4px 10px rgba(9,23,23,0.1);display:flex;flex-direction:column;gap:5px;padding:7px;box-sizing:border-box')}>
@@ -69,6 +76,41 @@ function ReviewPage() {
     setWhat(page.project.description)
     setWho(page.project.visibility)
   }, [page])
+
+  // The builds started at upload and carry on while this page is open. They
+  // only move on when somebody asks, so this page asks, and when the run is
+  // over it fetches the picture the Mac build took. Kept apart from the page
+  // itself so nothing typed above is lost when they change.
+  const [builds, setBuilds] = useState<Build[] | null>(null)
+  const [picture, setPicture] = useState<string | null>(null)
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    setBuilds(page?.builds ?? null)
+    setPicture(page?.version.picture_url ?? null)
+    setSettled(false)
+  }, [page])
+  const versionId = page?.version.id
+  useEffect(() => {
+    if (!versionId || picture || settled) return
+    let live = true
+    const ask = () => {
+      api.refresh(versionId)
+        .then(async (r) => {
+          if (!live) return
+          setBuilds(r.builds)
+          // Same rule as the progress page: keep asking while it is going.
+          if (r.outcome === 'waiting' || (r.found && !r.finished)) return
+          const fresh = await api.project(slug)
+          if (!live) return
+          if (fresh.version.picture_url) setPicture(fresh.version.picture_url)
+          setSettled(true)
+        })
+        .catch(() => undefined)
+    }
+    ask()
+    const timer = window.setInterval(ask, 8000)
+    return () => { live = false; window.clearInterval(timer) }
+  }, [versionId, picture, settled, slug])
 
   if (error) return <Plain current="Publish" title="That did not work" line="The project could not be loaded."><Trouble message={error.message} again={again} /></Plain>
   if (!page) return <Page current="Publish" orbs={P3}><CenterHero title={<span style={{ color: 'rgba(9,23,23,0.46)' }}>Getting it</span>} /><Main>{null}</Main></Page>
@@ -124,8 +166,12 @@ function ReviewPage() {
               <div className="fld">
                 <span className="lab">Cover</span>
                 <div style={s('display:flex;align-items:center;gap:18px')}>
-                  <SmallCover slug={slug} />
-                  <span className="small">We made this cover from the window people will get.</span>
+                  <SmallCover slug={slug} picture={picture} />
+                  <span className="small">
+                    {picture ? 'We made this cover from the window people will get.'
+                      : settled ? 'The build did not take a picture of the window this time, so this cover is drawn.'
+                        : 'The cover is a picture of the real window. It appears here once the Mac build takes it, in a few minutes.'}
+                  </span>
                 </div>
               </div>
             </Box>
@@ -150,13 +196,13 @@ function ReviewPage() {
             <div className="panel" style={s('display:flex;flex-direction:column;gap:6px;padding:28px')}>
               <h2 className="h2" style={{ marginBottom: 10 }}>Checks</h2>
               <Tally kind="done">Read the files</Tally>
-              <CheckRows check={page.check} builds={page.builds} />
+              <CheckRows check={page.check} builds={builds ?? page.builds} />
               <p className="small" style={{ margin: '14px 0 0' }}>Only checks that really ran appear here. The builds carry on while you read this.</p>
             </div>
           </>}
           right={
             <Box title="How it will look" note="This is the window people get when they open it.">
-              <KitWindow name={name || page.project.name} picture={page.version.picture_url} />
+              <KitWindow name={name || page.project.name} picture={picture} about={what} inputs={page.check?.manifest?.inputs} />
             </Box>
           }
         />

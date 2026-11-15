@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { api, SYSTEM_NAME, type Build, type Check, type Platform } from '../api'
+import { api, SYSTEM_NAME, type AppInput, type Build, type Check, type Platform } from '../api'
 import { Avatar, Backdrop, Bang, Checked, Main, Page, Tick, useSession, type NavName } from './bits'
 import type { OrbSpec } from '../fx'
 import { s } from '../s'
@@ -236,9 +236,13 @@ export function Column({ children, width }: { children: ReactNode; width?: numbe
 
 /**
  * The window someone gets when they open it. A picture of the real one
- * when the build took it, and drawn from the kit until then.
+ * when the build took it. Until then, drawn the way the runner draws it,
+ * one box per thing the app asks for, and from the kit when even that
+ * is not known yet.
  */
-export function KitWindow({ name, picture }: { name: string; picture?: string | null }) {
+export function KitWindow({ name, picture, about, inputs }: {
+  name: string; picture?: string | null; about?: string; inputs?: AppInput[] | null
+}) {
   if (picture) {
     return (
       <div className="win" style={{ padding: 0, gap: 0, overflow: 'hidden' }}>
@@ -246,6 +250,7 @@ export function KitWindow({ name, picture }: { name: string; picture?: string | 
       </div>
     )
   }
+  if (inputs && inputs.length > 0) return <DrawnWindow name={name} about={about} inputs={inputs} />
   return (
     <div className="win">
       <div className="wbar" aria-hidden="true">
@@ -272,6 +277,85 @@ export function KitWindow({ name, picture }: { name: string; picture?: string | 
         </div>
         <span className="small" style={{ textAlign: 'center' }}>Available after it finishes</span>
       </div>
+    </div>
+  )
+}
+
+/* The runner's own look (runner/src/renderer/src/styles.css), so the drawing
+   and the picture that replaces it are the same window. */
+const RW = {
+  field: s('display:flex;flex-direction:column;gap:6px'),
+  label: s('font-size:15px;font-weight:600;color:#1c1c1e'),
+  box: s('display:flex;align-items:center;gap:10px;min-height:38px;padding:8px 12px;box-sizing:border-box;border:1px solid #d0d0d5;border-radius:8px;background:#fff;font-size:15px;color:#6b6b70'),
+  button: s('flex:none;padding:7px 12px;border:1px solid #d0d0d5;border-radius:8px;font-size:15px;color:#1c1c1e;background:#fff'),
+  help: s('font-size:13px;color:#6b6b70'),
+}
+
+function DrawnWindow({ name, about, inputs }: { name: string; about?: string; inputs: AppInput[] }) {
+  return (
+    <div className="win" style={{ gap: 0 }} aria-label={`The ${name} window, drawn from what it asks for`}>
+      <div className="wbar" aria-hidden="true">
+        <i className="wdot" /><i className="wdot" style={{ opacity: 0.7 }} />
+        <i className="wdot" style={{ opacity: 0.45 }} />
+        <span style={{ width: 8 }} />
+        <span className="small" style={{ color: 'rgba(9,23,23,0.64)' }}>{name}</span>
+      </div>
+      <div style={s('display:flex;flex-direction:column;gap:16px;padding:12px 8px 8px;font-family:system-ui,sans-serif')}>
+        <div style={s('display:flex;flex-direction:column;gap:4px;margin-bottom:8px')}>
+          <span style={s('font-size:22px;font-weight:700;color:#1c1c1e')}>{name}</span>
+          {about ? <span style={s('font-size:15px;line-height:1.45;color:#6b6b70')}>{about}</span> : null}
+        </div>
+        {inputs.map((input) => <DrawnField key={input.id} input={input} />)}
+        <div style={s('display:flex;align-items:center;justify-content:center;min-height:40px;margin-top:8px;border-radius:8px;background:#2563eb;color:#fff;font-size:15px;font-weight:600')}>
+          Run
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DrawnField({ input }: { input: AppInput }) {
+  const help = input.help ? <span style={RW.help}>{input.help}</span> : null
+  if (input.kind === 'boolean') {
+    return (
+      <div style={RW.field}>
+        <span style={s('display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:#1c1c1e')}>
+          <i style={s('display:block;width:16px;height:16px;border:1px solid #d0d0d5;border-radius:4px;background:#fff')} />
+          {input.label}
+        </span>
+        {help}
+      </div>
+    )
+  }
+  if (input.kind === 'file' || input.kind === 'folder') {
+    return (
+      <div style={RW.field}>
+        <span style={RW.label}>{input.label}</span>
+        <span style={s('display:flex;align-items:center;gap:12px;font-size:15px;color:#6b6b70')}>
+          <span style={{ flex: 1 }}>{input.kind === 'folder' ? 'No folder chosen' : 'No file chosen'}</span>
+          <span style={RW.button}>Choose…</span>
+        </span>
+        {help}
+      </div>
+    )
+  }
+  if (input.kind === 'choice') {
+    return (
+      <div style={RW.field}>
+        <span style={RW.label}>{input.label}</span>
+        <span style={RW.box}>
+          <span style={{ flex: 1 }}>Choose…</span>
+          <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="#6b6b70" strokeWidth="1.6" /></svg>
+        </span>
+        {help}
+      </div>
+    )
+  }
+  return (
+    <div style={RW.field}>
+      <span style={RW.label}>{input.label}</span>
+      <span style={RW.box}>{' '}</span>
+      {help}
     </div>
   )
 }

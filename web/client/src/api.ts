@@ -155,7 +155,19 @@ export interface Check {
   confidence: 'high' | 'medium' | 'low' | null
   manifest: {
     capabilities?: { runs_other_programs?: boolean; reads_env_vars?: string[] }
+    inputs?: AppInput[]
   } | null
+}
+
+/** One thing the app asks for, as the analyzer wrote it in the manifest. */
+export interface AppInput {
+  id: string
+  kind: 'file' | 'folder' | 'text' | 'number' | 'choice' | 'boolean' | string
+  label: string
+  help?: string | null
+  choices?: string[] | null
+  default?: unknown
+  secret?: boolean
 }
 
 export interface ProjectPage {

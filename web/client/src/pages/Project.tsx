@@ -329,7 +329,7 @@ export function Project() {
                 <h2 className="h2">What it looks like</h2>
                 <span className="small">This is the whole thing. There is nothing else to learn.</span>
               </div>
-              <KitWindow name={project.name} picture={offered.version.picture_url} />
+              <KitWindow name={project.name} picture={offered.version.picture_url} about={project.description} inputs={offered.check?.manifest?.inputs} />
             </div>
 
             {project.description ? (
