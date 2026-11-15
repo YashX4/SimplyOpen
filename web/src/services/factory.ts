@@ -8,6 +8,7 @@
  */
 
 import type { BuildStatus, Platform } from '../types.js'
+import { unwrapSingleZip } from './unwrap.js'
 
 export interface DispatchInput {
   buildId: string
@@ -145,6 +146,7 @@ export class GithubFactory implements Factory {
   async download(artifactId: number): Promise<Uint8Array> {
     const response = await this.api(`/actions/artifacts/${artifactId}/zip`)
     if (!response.ok) throw new Error(`Could not fetch the built app: ${response.status}`)
-    return new Uint8Array(await response.arrayBuffer())
+    // GitHub wraps the app's zip in a zip of its own. Hand out the app's.
+    return unwrapSingleZip(new Uint8Array(await response.arrayBuffer()))
   }
 }
