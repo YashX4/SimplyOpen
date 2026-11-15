@@ -10,6 +10,7 @@ import { fail, mustBeSignedIn, type AppDeps } from '../app.js'
 import * as projects from '../repo/projects.js'
 import * as suggestions from '../repo/suggestions.js'
 import * as versions from '../repo/versions.js'
+import { buildExisting } from '../services/release.js'
 import { canEdit, canSee } from '../visibility.js'
 
 interface ChangeBody {
@@ -116,12 +117,26 @@ export async function registerSuggestions(app: FastifyInstance, deps: AppDeps): 
         (request.body?.note ?? '').trim() ||
         detail.changes.map((c) => c.title).join(' ') ||
         'A change somebody suggested.'
+      let taken
       try {
-        const taken = await suggestions.take(deps.db, detail.suggestion.id, viewer.id, note)
-        return reply.send(taken)
+        taken = await suggestions.take(deps.db, detail.suggestion.id, viewer.id, note)
       } catch (error) {
         return fail(reply, 409, 'ALREADY_DECIDED', (error as Error).message)
       }
+      // The copy's own files become the new version's files, and get built.
+      // If that fails the version still stands, and its page says it is not built.
+      let built = false
+      const copy = await suggestions.copyById(deps.db, detail.suggestion.copy_id)
+      const zip = copy?.working_zip_url ? await deps.storage.read(copy.working_zip_url) : null
+      if (zip) {
+        try {
+          await buildExisting(deps, taken.version, zip)
+          built = true
+        } catch (error) {
+          request.log.warn({ err: error }, 'building a taken suggestion failed')
+        }
+      }
+      return reply.send({ ...taken, built })
     },
   )
 

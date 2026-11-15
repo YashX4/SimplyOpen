@@ -6,6 +6,7 @@ import { MemoryMailer } from '../src/services/mailer.js'
 import type { Analyzer, AnalyzeResult, Manifest } from '../src/services/analyzer.js'
 import type { Factory, RunState } from '../src/services/factory.js'
 import * as users from '../src/repo/users.js'
+import { ChatError, type Chat, type ChatAnswer, type ChatVersion } from '../src/services/chat.js'
 
 export function manifest(over: Partial<Manifest> = {}): Manifest {
   return {
@@ -51,6 +52,57 @@ export class FakeFactory implements Factory {
   }
 }
 
+/** Stands in for SimplyOpen Chat. Each message that says "change" makes a version. */
+export class FakeChat implements Chat {
+  readonly started: Uint8Array[] = []
+  readonly sessions = new Map<string, { versions: ChatVersion[]; zip: Uint8Array }>()
+  private n = 0
+
+  async start(zip: Uint8Array) {
+    this.started.push(zip)
+    const sessionId = `s${++this.n}`
+    const v0: ChatVersion = { number: 0, label: 'Your copy', createdAt: new Date().toISOString(), changes: [] }
+    this.sessions.set(sessionId, { versions: [v0], zip })
+    return { sessionId, version: v0 }
+  }
+  private get(id: string) {
+    const s = this.sessions.get(id)
+    if (!s) throw new ChatError('There is no chat with that id (it may have expired).', 404, 'NO_SUCH_SESSION')
+    return s
+  }
+  async send(id: string, message: string, confirmPrivate: boolean): Promise<ChatAnswer> {
+    const s = this.get(id)
+    if (message.includes('@') && !confirmPrivate) {
+      return { kind: 'privacy_reminder', reminder: 'There is an email address in this.', found: ['an email address'] }
+    }
+    if (!message.includes('change')) {
+      return { kind: 'reply', reply: 'No, I cannot do that one.', version: null, readyToDownload: null, stoppedEarly: false }
+    }
+    const v: ChatVersion = {
+      number: s.versions.length, label: `You asked: ${message}`, createdAt: new Date().toISOString(),
+      changes: [{ path: 'main.py', change: 'edited' }], checks: { status: 'passed', summary: 'The automatic checks passed.' },
+    }
+    s.versions.push(v)
+    s.zip = new TextEncoder().encode(`changed ${v.number}`)
+    return { kind: 'reply', reply: 'Done.', version: v, readyToDownload: null, stoppedEarly: false }
+  }
+  async versions(id: string) { return this.get(id).versions }
+  async undo(id: string) {
+    const s = this.get(id)
+    const v: ChatVersion = { number: s.versions.length, label: 'Undid the last change', createdAt: new Date().toISOString(), changes: [] }
+    s.versions.push(v)
+    return v
+  }
+  async restore(id: string, n: number) {
+    const s = this.get(id)
+    const v: ChatVersion = { number: s.versions.length, label: `Went back to ${n}`, createdAt: new Date().toISOString(), changes: [] }
+    s.versions.push(v)
+    return v
+  }
+  async zip(id: string) { return this.get(id).zip }
+  async end(id: string) { this.sessions.delete(id) }
+}
+
 export interface Harness {
   db: Db
   app: Awaited<ReturnType<typeof buildApp>>
@@ -58,6 +110,7 @@ export interface Harness {
   mailer: MemoryMailer
   analyzer: FakeAnalyzer
   factory: FakeFactory
+  chat: FakeChat
   /** A signed in person, and the cookie header that proves it. */
   signIn(email: string, name?: string): Promise<{ id: string; cookie: string }>
   close(): Promise<void>
@@ -76,7 +129,8 @@ export async function harness(over: { analyzer?: FakeAnalyzer } = {}): Promise<H
       description: 'Turns Zoom transcripts into files NVivo opens.',
     })
   const factory = new FakeFactory()
-  const app = await buildApp({ db, analyzer, storage, factory, mailer, logger: false })
+  const chat = new FakeChat()
+  const app = await buildApp({ db, analyzer, storage, factory, mailer, chat, logger: false })
 
   return {
     db,
@@ -85,6 +139,7 @@ export async function harness(over: { analyzer?: FakeAnalyzer } = {}): Promise<H
     mailer,
     analyzer,
     factory,
+    chat,
     async signIn(email: string, name = '') {
       const user = await users.findOrCreate(db, email, name)
       const token = await users.startSignIn(db, email)

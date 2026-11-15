@@ -12,6 +12,8 @@ import { MyThings } from './pages/MyThings'
 import { Manage } from './pages/Manage'
 import { Inbox, Suggestion, TakeIt } from './pages/Suggestions'
 import { GoBack, Version, Versions } from './pages/Versions'
+import { ChangeIt, MakeVersion } from './pages/Chat'
+import { MakeCopy, SuggestBack, YourCopy } from './pages/Copy'
 import { Plain } from './components/bits'
 import './styles.css'
 
@@ -47,6 +49,12 @@ createRoot(root).render(
         <Route path="/my-things" element={<MyThings />} />
         <Route path="/my-things/:slug" element={<Manage />} />
         <Route path="/my-things/:slug/suggestions" element={<Inbox />} />
+        <Route path="/my-things/:slug/change" element={<ChangeIt mode="maker" />} />
+        <Route path="/my-things/:slug/change/version" element={<MakeVersion />} />
+        <Route path="/p/:slug/copy" element={<MakeCopy />} />
+        <Route path="/copies/:id" element={<YourCopy />} />
+        <Route path="/copies/:id/change" element={<ChangeIt mode="copy" />} />
+        <Route path="/copies/:id/suggest" element={<SuggestBack />} />
         <Route path="/suggestions/:id" element={<Suggestion />} />
         <Route path="/suggestions/:id/take" element={<TakeIt />} />
         <Route path="*" element={

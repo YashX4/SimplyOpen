@@ -14,6 +14,7 @@ import { migrate } from './migrate.js'
 import { HttpAnalyzer, type Analyzer } from './services/analyzer.js'
 import { GithubFactory, type Factory } from './services/factory.js'
 import { ConsoleMailer } from './services/mailer.js'
+import { HttpChat } from './services/chat.js'
 import { MemoryStorage, SupabaseStorage, type Storage } from './services/storage.js'
 
 class NoAnalyzer implements Analyzer {
@@ -62,6 +63,8 @@ async function main(): Promise<void> {
     storage,
     factory,
     mailer: new ConsoleMailer(),
+    // SimplyOpen Chat, from chat/ in this repository. It listens on 3100.
+    chat: env.CHAT_URL ? new HttpChat(env.CHAT_URL) : undefined,
     // Where the website is, because the sign in link opens the website.
     siteUrl: env.SITE_URL ?? 'http://localhost:5173',
     logger: true,

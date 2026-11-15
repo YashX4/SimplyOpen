@@ -201,7 +201,11 @@ function TakeItPage() {
   const [out, setOut] = useState<{ number: number; note: string } | null>(null)
 
   useEffect(() => {
-    if (data) setNote(data.detail.suggestion.note || data.detail.changes.map((c) => c.title).join(' '))
+    // What changed, not why they wanted it: the note is to the maker, this is for everyone.
+    if (data) {
+      const titles = data.detail.changes.filter((c) => c.included).map((c) => c.title.replace(/[.?!]*$/, '.'))
+      setNote(titles.join(' ') || data.detail.suggestion.note)
+    }
   }, [data])
 
   if (error) return <Plain current="My things" title="That did not work" line="This suggestion could not be loaded."><Trouble message={error.message} again={again} /></Plain>

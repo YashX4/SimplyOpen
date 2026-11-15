@@ -80,6 +80,37 @@ export interface MyThings {
   waiting_suggestions: number
 }
 
+export interface ChatVersion {
+  number: number
+  label: string
+  createdAt: string
+  changes: { path: string; change: string }[]
+  checks?: { status: 'passed' | 'failed' | 'unavailable'; summary: string } | null
+}
+
+export interface ChatInfo {
+  id: string
+  kind: 'maker' | 'copy'
+  project: { slug: string; name: string }
+  copy_id: string | null
+  from_version: number
+  started_at: string
+}
+
+export interface ChatStart { chat: ChatInfo; versions: ChatVersion[] }
+
+export type ChatAnswer =
+  | { kind: 'reply'; reply: string; version: ChatVersion | null; readyToDownload: { version: number } | null; stoppedEarly: boolean }
+  | { kind: 'privacy_reminder'; reminder: string; found: string[] }
+
+export interface CopyDetail {
+  copy: { id: string; name: string; created_at: string; changed: boolean }
+  project: { slug: string; name: string; maker: string } | null
+  from_version: { id: string; number: number; note: string } | null
+  suggestions: { id: string; state: 'waiting' | 'taken' | 'left' | 'withdrawn'; note: string; created_at: string }[]
+  chat: ChatInfo | null
+}
+
 export interface Me {
   id: string
   name: string
@@ -217,6 +248,22 @@ export const api = {
     return call<UploadResult>('/api/projects', { method: 'POST', body: form, signal })
   },
   downloadUrl: (versionId: string, platform: Platform) => `/api/download/${versionId}/${platform}`,
+
+  /* Changing it by chatting, C1 to C11, and copies, Y1 to Y3. */
+  chatOnMine: (slug: string) => post<ChatStart>(`${slugged(slug)}/chats`),
+  chatOnCopy: (copyId: string) => post<ChatStart>(`/api/copies/${copyId}/chats`),
+  chat: (id: string) => get<ChatStart>(`/api/chats/${id}`),
+  say: (id: string, message: string, confirmPrivate = false) =>
+    post<ChatAnswer>(`/api/chats/${id}/messages`, confirmPrivate ? { message, confirmPrivate } : { message }),
+  undo: (id: string) => post<{ version: ChatVersion | null }>(`/api/chats/${id}/undo`),
+  restore: (id: string, n: number) => post<{ version: ChatVersion | null }>(`/api/chats/${id}/versions/${n}/restore`),
+  release: (id: string, note: string) =>
+    post<{ version: { id: string; number: number }; project: { slug: string } }>(`/api/chats/${id}/release`, { note }),
+  keep: (id: string) => post<{ kept: true }>(`/api/chats/${id}/keep`),
+  endChat: (id: string) => call<unknown>(`/api/chats/${id}`, { method: 'DELETE' }).catch(() => undefined),
+  copyOf: (id: string) => get<CopyDetail>(`/api/copies/${id}`),
+  suggestFrom: (copyId: string, note: string, changes: { title: string; before?: string; after?: string }[]) =>
+    post<{ suggestion: { id: string } }>(`/api/copies/${copyId}/suggestions`, { note, changes }),
 }
 
 /** "mac" is what the API calls it. "Mac" is what a person calls it. */

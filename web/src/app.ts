@@ -23,6 +23,8 @@ import { registerProjects } from './routes/projects.js'
 import { registerUploads } from './routes/uploads.js'
 import { registerSuggestions } from './routes/suggestions.js'
 import { registerMe } from './routes/me.js'
+import { registerChat } from './routes/chat.js'
+import type { Chat } from './services/chat.js'
 
 export interface AppDeps {
   db: Db
@@ -30,6 +32,8 @@ export interface AppDeps {
   storage: Storage
   factory: Factory
   mailer: Mailer
+  /** SimplyOpen Chat. Without it, changing things by chatting says it is not set up. */
+  chat?: Chat
   /** Where the browser is, for the sign in link. */
   siteUrl?: string
   maxUploadBytes?: number
@@ -100,6 +104,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerUploads(app, deps)
   await registerSuggestions(app, deps)
   await registerMe(app, deps)
+  await registerChat(app, deps)
 
   app.setNotFoundHandler((request, reply) =>
     fail(reply, 404, 'NOT_FOUND', 'There is nothing at that address.'),
