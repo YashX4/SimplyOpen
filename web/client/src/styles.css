@@ -1,0 +1,187 @@
+/*
+ * The design language, as one file.
+ *
+ * Taken from the Comet inspired system we settled on: cream ground,
+ * near black ink, one weight, a fixed ladder of sizes, and a panel
+ * surface with a sideways wash that reads as glass rather than paint.
+ *
+ * FONTS: the real design uses GT Canon and GT Standard, which are
+ * licensed from Grilli Type and cannot be shipped here. Fraunces and
+ * Inter stand in. To swap the real ones back, replace the @import
+ * below and the two font stacks, and nothing else changes.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Inter:wght@300;400&display=swap');
+
+:root {
+  --paper: #fbfaf4;
+  --ink: #091717;
+  --ink-muted: rgba(9, 23, 23, 0.64);
+  --hairline: rgba(9, 23, 23, 0.16);
+  --control-line: rgba(9, 23, 23, 0.46);
+  --teal: #2f6f6a;
+  --clay: #b4563c;
+
+  --panel: linear-gradient(90deg, #c7d5d8 0%, #eff0ea 9%, #ecece4 28%,
+           #e8e8e0 50%, #e2e2d6 72%, #ccd6d0 94%, #c5d0ca 100%);
+  --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  --panel-shadow-lift: 0 14px 30px rgba(9, 23, 23, 0.13),
+                       inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  --button: linear-gradient(180deg, #263435 0%, #0f1916 100%);
+
+  --display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', -apple-system, Helvetica, Arial, sans-serif;
+
+  --r-sm: 12px;
+  --r-md: 24px;
+  --r-pill: 999px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Emphasis comes from size, never from weight. Nothing here is bold. */
+h1, h2, h3, strong, b { font-weight: 300; margin: 0; }
+
+a { color: var(--ink); }
+
+:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------- type */
+.canon { font-family: var(--display); font-optical-sizing: auto; }
+
+.hero    { font-size: 80px; line-height: 1; letter-spacing: -0.02em; }
+.title   { font-size: 64px; line-height: 1.2; letter-spacing: -0.011em; }
+.section { font-size: 48px; line-height: 1.2; letter-spacing: -0.021em; }
+.h2      { font-size: 24px; line-height: 1.2; letter-spacing: -0.03em; }
+.h3      { font-size: 20px; line-height: 1.2; letter-spacing: -0.03em; }
+.lead    { font-size: 20px; line-height: 1.3; color: var(--ink-muted); }
+.body    { font-size: 16px; line-height: 1.4; }
+.small   { font-size: 14px; line-height: 1.4; color: var(--ink-muted); }
+.muted   { color: var(--ink-muted); }
+
+@media (max-width: 760px) {
+  .hero { font-size: 48px; line-height: 1.1; }
+  .title { font-size: 48px; }
+  .section { font-size: 32px; }
+}
+
+/* -------------------------------------------------------------- layout */
+.wrap {
+  width: 100%;
+  padding-left: clamp(24px, 5vw, 64px);
+  padding-right: clamp(24px, 5vw, 64px);
+}
+.col { width: 100%; max-width: 880px; margin: 0 auto; }
+.stack { display: flex; flex-direction: column; }
+.grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+@media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* -------------------------------------------------------------- panels */
+.panel {
+  position: relative;
+  border-radius: var(--r-md);
+  background: var(--panel);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+  padding: 28px;
+}
+a.panel { text-decoration: none; color: var(--ink); display: block;
+          transition: box-shadow .25s ease, transform .25s ease; }
+a.panel:hover { box-shadow: var(--panel-shadow-lift); transform: translateY(-3px); }
+
+/* ------------------------------------------------------------- controls */
+.btn, .ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 50px; padding: 0 28px; border-radius: var(--r-pill);
+  font-family: inherit; font-size: 18px; font-weight: 300;
+  text-decoration: none; cursor: pointer; border: 0;
+}
+.btn { background: var(--button); color: var(--paper); }
+.ghost { background: transparent; color: var(--ink); border: 1px solid var(--control-line); }
+.ghost:hover { border-color: var(--ink); }
+.btn[aria-disabled='true'], .ghost[aria-disabled='true'] {
+  color: var(--ink-muted); cursor: not-allowed; pointer-events: none;
+  background: transparent; border: 1px solid var(--hairline);
+}
+.wide { width: 100%; }
+
+.inp {
+  display: block; width: 100%; height: 52px; padding: 0 16px;
+  border-radius: var(--r-sm); border: 1px solid var(--control-line);
+  background: #fff; color: var(--ink);
+  font-family: inherit; font-size: 18px; font-weight: 300;
+}
+.inp::placeholder { color: var(--ink-muted); }
+
+.chip {
+  display: inline-flex; align-items: center; height: 44px; padding: 0 20px;
+  border-radius: 22px; border: 1px solid var(--control-line);
+  background: rgba(255, 255, 255, 0.5); color: var(--ink);
+  font-size: 16px; text-decoration: none;
+}
+.chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* ---------------------------------------------------------------- marks */
+.mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--control-line); color: var(--paper);
+}
+.mark svg { width: 15px; height: 15px; }
+.mark.done { background: var(--teal); border-color: var(--teal); }
+.mark.bad  { background: var(--clay); border-color: var(--clay); }
+.mark.na   { color: var(--ink-muted); border-color: var(--control-line); }
+
+.row {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px 0; border-top: 1px solid var(--hairline);
+}
+.row:first-child { border-top: 0; }
+
+.door { padding-top: 20px; border-top: 1px solid var(--hairline);
+        display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+.av {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
+  color: var(--paper); font-size: 14px;
+}
+.who { display: inline-flex; align-items: center; gap: 10px; }
+
+/* The app window drawn inside a project page. */
+.win {
+  display: flex; flex-direction: column; gap: 18px; padding: 20px;
+  border-radius: 16px; background: #fff; border: 1px solid var(--hairline);
+  box-shadow: 0 10px 26px rgba(9, 23, 23, 0.1);
+}
+.wbar { display: flex; align-items: center; gap: 8px; }
+.wdot { display: block; width: 10px; height: 10px; border-radius: 50%;
+        background: rgba(9, 23, 23, 0.22); }
+.wdrop {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 6px; height: 128px;
+  border: 2px dashed var(--control-line); border-radius: 14px;
+  background: rgba(9, 23, 23, 0.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a.panel { transition: none; }
+}
