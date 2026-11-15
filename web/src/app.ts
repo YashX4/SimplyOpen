@@ -36,6 +36,12 @@ export interface AppDeps {
   chat?: Chat
   /** Where the browser is, for the sign in link. */
   siteUrl?: string
+  /**
+   * Hand the sign in link back to the page as well as emailing it. Only for
+   * a site running on your own computer, where no email is really sent.
+   * Never on a public site: it would let anyone sign in as anyone.
+   */
+  showSignInLinks?: boolean
   maxUploadBytes?: number
   logger?: boolean
 }

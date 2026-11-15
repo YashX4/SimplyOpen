@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { api, colourFor, initials, type Me } from '../api'
+import { api, colourFor, displayName, initials, type Me } from '../api'
 import { ARCS } from '../arcs'
 import { startFx, type OrbSpec } from '../fx'
 import { s } from '../s'
@@ -118,8 +118,8 @@ export function Header({ current }: { current?: NavName }) {
       <div style={{ flex: 1 }} />
       {me ? (
         <Link className="nav who" to="/my-things" style={{ color: '#091717' }}>
-          <Avatar name={me.name} size={30} />
-          {me.name.split(/\s+/)[0]}
+          <Avatar name={displayName(me)} size={30} />
+          {displayName(me).split(/\s+/)[0]}
         </Link>
       ) : (
         <Link className="btn" to="/sign-in">Sign in</Link>

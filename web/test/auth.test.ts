@@ -97,3 +97,28 @@ describe('signing in', () => {
     expect(response.json().error.code).toBe('SIGN_IN_NEEDED')
   })
 })
+
+describe('signing up for the first time', () => {
+  it('a new address makes an account with no name yet, which the person then gives', async () => {
+    const h2 = await (await import('./helpers.js')).harness()
+    try {
+      const them = await h2.signIn('new.person@example.ac.uk')
+      const before = await h2.app.inject({ method: 'GET', url: '/api/me', headers: { cookie: them.cookie } })
+      expect(before.json().user.name).toBe('')
+      const named = await h2.app.inject({ method: 'PATCH', url: '/api/me', headers: { cookie: them.cookie }, payload: { name: '  Ama   Osei ' } })
+      expect(named.statusCode).toBe(200)
+      const after = await h2.app.inject({ method: 'GET', url: '/api/me', headers: { cookie: them.cookie } })
+      expect(after.json().user.name).toBe('Ama Osei')
+      expect((await h2.app.inject({ method: 'PATCH', url: '/api/me', headers: { cookie: them.cookie }, payload: { name: ' ' } })).statusCode).toBe(400)
+      expect((await h2.app.inject({ method: 'PATCH', url: '/api/me', payload: { name: 'X' } })).statusCode).toBe(401)
+    } finally { await h2.close() }
+  })
+
+  it('never hands the link back unless the site is told to', async () => {
+    const h2 = await (await import('./helpers.js')).harness()
+    try {
+      const res = await h2.app.inject({ method: 'POST', url: '/api/auth/link', payload: { email: 'a@example.ac.uk' } })
+      expect(res.json()).toEqual({ sent: true })
+    } finally { await h2.close() }
+  })
+})

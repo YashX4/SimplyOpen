@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, inWords, readableAgo, SEEN_BY, type MyThings as Things, type SuggestionDetail } from '../api'
+import { api, displayName, inWords, readableAgo, SEEN_BY, type MyThings as Things, type SuggestionDetail } from '../api'
 import { Avatar, Hero, Main, Page, Plain, refreshSession, Trouble, useSession } from '../components/bits'
 import { Box, CenterHero, Column, Door, Doors, Line, Meta, Rows, SignedIn, TwoUp, useLoad } from '../components/kit'
 import type { OrbSpec } from '../fx'
@@ -52,7 +52,7 @@ function MyThingsPage() {
   return (
     <Page current="My things" orbs={M}>
       <Hero pre={<p className="small" style={{ margin: 0 }}>My things</p>} title="My things"
-        sub={<Meta who={me.name} facts={[countLine(data.made.length, data.copies.length)]} />} />
+        sub={<Meta who={displayName(me)} facts={[countLine(data.made.length, data.copies.length)]} />} />
       <Main>
         <TwoUp
           left={<div style={s('display:flex;flex-direction:column;gap:20px')}>

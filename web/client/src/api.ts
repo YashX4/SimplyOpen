@@ -237,7 +237,8 @@ export const api = {
   take: (id: string, note: string) =>
     post<{ version: { id: string; number: number; note: string } }>(`/api/suggestions/${id}/take`, { note }),
   leave: (id: string) => post<{ suggestion: SuggestionDetail['suggestion'] }>(`/api/suggestions/${id}/leave`),
-  emailLink: (email: string) => post<{ sent: true }>('/api/auth/link', { email }),
+  emailLink: (email: string) => post<{ sent: true; link?: string }>('/api/auth/link', { email }),
+  name: (name: string) => send<{ user: Me }>('PATCH', '/api/me', { name }),
   finishSignIn: (token: string) =>
     get<{ user: Me }>(`/api/auth/callback?token=${encodeURIComponent(token)}`),
   signOut: () => post<{ signed_out: true }>('/api/auth/sign-out'),
@@ -341,4 +342,9 @@ export const SEEN_BY: Record<Visibility, string> = {
 export function inWords(n: number): string {
   const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
   return words[n] ?? String(n)
+}
+
+/** What to call someone who has not said yet: the start of their email address. */
+export function displayName(me: { name: string; email: string }): string {
+  return me.name.trim() || me.email.split('@')[0] || 'You'
 }

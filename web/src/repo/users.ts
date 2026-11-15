@@ -24,6 +24,10 @@ export async function findOrCreate(db: Db, email: string, name = ''): Promise<Us
   return row
 }
 
+export async function setName(db: Db, id: string, name: string): Promise<void> {
+  await db.query('update users set name = $2 where id = $1', [id, name])
+}
+
 function token(): string {
   return randomBytes(32).toString('base64url')
 }

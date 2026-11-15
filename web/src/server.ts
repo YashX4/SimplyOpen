@@ -67,6 +67,11 @@ async function main(): Promise<void> {
     chat: env.CHAT_URL ? new HttpChat(env.CHAT_URL) : undefined,
     // Where the website is, because the sign in link opens the website.
     siteUrl: env.SITE_URL ?? 'http://localhost:5173',
+    // No email is really sent, so on your own computer the page gets the link too.
+    // Only ever for a site at localhost: anywhere public it would let anyone in as anyone.
+    showSignInLinks:
+      env.NODE_ENV !== 'production' &&
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(env.SITE_URL ?? 'http://localhost:5173'),
     logger: true,
   })
 

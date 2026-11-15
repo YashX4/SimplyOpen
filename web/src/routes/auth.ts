@@ -20,17 +20,18 @@ export async function registerAuth(app: FastifyInstance, deps: AppDeps): Promise
       return fail(reply, 400, 'BAD_EMAIL', 'That does not look like an email address.')
     }
     const token = await users.startSignIn(deps.db, email)
+    const link = `${site}/sign-in/done?token=${token}`
     await deps.mailer.send({
       to: email,
       subject: 'Your link to sign in',
       text:
         `Open this on the computer you want to sign in on:\n\n` +
-        `${site}/sign-in/done?token=${token}\n\n` +
+        `${link}\n\n` +
         `It works once, and it stops working after an hour.`,
     })
     // The same answer whether or not that address has an account, so
     // nobody can use this to find out who has one.
-    return reply.send({ sent: true })
+    return reply.send(deps.showSignInLinks ? { sent: true, link } : { sent: true })
   })
 
   app.get<{ Querystring: { token?: string } }>('/api/auth/callback', async (request, reply) => {
@@ -49,6 +50,16 @@ export async function registerAuth(app: FastifyInstance, deps: AppDeps): Promise
     if (token) await users.signOut(deps.db, token)
     setCookie(reply, SESSION_COOKIE, '', 0)
     return reply.send({ signed_out: true })
+  })
+
+  /** The first time someone signs in, they say what people should call them. */
+  app.patch<{ Body: { name?: string } }>('/api/me', async (request, reply) => {
+    if (!request.viewer) return fail(reply, 401, 'SIGN_IN_NEEDED', 'Sign in first.')
+    const name = (request.body?.name ?? '').trim().replace(/\s+/g, ' ')
+    if (!name) return fail(reply, 400, 'NO_NAME', 'Say what people should call you.')
+    if (name.length > 80) return fail(reply, 400, 'NAME_TOO_LONG', 'Keep it under 80 letters.')
+    await users.setName(deps.db, request.viewer.id, name)
+    return reply.send({ user: { id: request.viewer.id, name, email: request.viewer.email } })
   })
 
   app.get('/api/me', async (request, reply) => {

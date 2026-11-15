@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { api } from '../api'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { api, type Me } from '../api'
 import { Main, Page, refreshSession, useSession } from '../components/bits'
 import { Box, CenterHero, Column, Line, Rows } from '../components/kit'
 import type { OrbSpec } from '../fx'
@@ -33,7 +33,7 @@ export function SignIn() {
     setBusy(true)
     setError(null)
     api.emailLink(email.trim())
-      .then(() => navigate(`/sign-in/check?email=${encodeURIComponent(email.trim())}`))
+      .then((r) => navigate(`/sign-in/check?email=${encodeURIComponent(email.trim())}`, { state: { link: r.link } }))
       .catch((e: Error) => { setError(e.message); setBusy(false) })
   }
 
@@ -79,7 +79,11 @@ export function SignIn() {
 export function CheckEmail() {
   const [params] = useSearchParams()
   const email = params.get('email') ?? ''
+  const where = useLocation()
+  const navigate = useNavigate()
   const [again, setAgain] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [link, setLink] = useState<string | null>((where.state as { link?: string } | null)?.link ?? null)
+  const open = () => { if (link) { const u = new URL(link); navigate(u.pathname + u.search) } }
 
   return (
     <Page orbs={W10}>
@@ -87,6 +91,12 @@ export function CheckEmail() {
         sub={`We sent a link to ${email || 'your address'}. Open it on this computer and you are in.`} />
       <Main>
         <Column width={560}>
+          {link ? (
+            <Box title="No email is sent on this computer" note="The site is running on your own computer, so here is the link that email would have had.">
+              <button type="button" className="btn" onClick={open} style={s('width:100%;box-sizing:border-box')}>Open my sign in link</button>
+              <span className="small">On the real site this comes by email, and this button is never shown.</span>
+            </Box>
+          ) : null}
           <Box title="Nothing to type in">
             <Rows>
               <Line left="The link signs you in" right="One click" />
@@ -104,7 +114,7 @@ export function CheckEmail() {
                   style={{ marginLeft: 'auto', minHeight: 44 }}
                   onClick={() => {
                     setAgain('sending')
-                    api.emailLink(email).then(() => setAgain('sent')).catch(() => setAgain('idle'))
+                    api.emailLink(email).then((r) => { setAgain('sent'); if (r.link) setLink(r.link) }).catch(() => setAgain('idle'))
                   }}>
                   Send
                 </button>
@@ -117,12 +127,6 @@ export function CheckEmail() {
             <p className="small" style={{ margin: 0 }}>
               Look in spam as well. University mail systems often hold links for a few minutes before letting them through.
             </p>
-            {import.meta.env.DEV ? (
-              <p className="small" style={{ margin: 0 }}>
-                While the site runs on your own computer, no email is sent. The link is printed in the
-                terminal running the API instead.
-              </p>
-            ) : null}
           </Box>
           <div style={s('display:flex;flex-wrap:wrap;gap:14px;align-items:center')}>
             <Link className="ghost" to="/">Back to browsing</Link>
@@ -135,27 +139,69 @@ export function CheckEmail() {
 }
 
 /** A link works once, so each one is only ever spent once, however often React asks. */
-const spent = new Map<string, Promise<unknown>>()
+const spent = new Map<string, Promise<Me>>()
 
-/** Where the link in the email lands. Finishes signing in, then goes on. */
+/** Where the link in the email lands. Finishes signing in, asks a new person their name, then goes on. */
 export function SignInDone() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [failed, setFailed] = useState<string | null>(null)
+  const [nameless, setNameless] = useState<Me | null>(null)
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     const token = params.get('token') ?? ''
     let once = spent.get(token)
     if (!once) {
-      once = api.finishSignIn(token).then(() => refreshSession())
+      once = api.finishSignIn(token).then(async (r) => { await refreshSession(); return r.user })
       spent.set(token, once)
     }
     let live = true
     once
-      .then(() => { if (live) navigate(afterSignIn(), { replace: true }) })
+      .then((user) => {
+        if (!live) return
+        if (!user.name.trim()) setNameless(user)
+        else navigate(afterSignIn(), { replace: true })
+      })
       .catch((e: Error) => { if (live) setFailed(e.message) })
     return () => { live = false }
   }, [params, navigate])
+
+  const save = (event: React.FormEvent) => {
+    event.preventDefault()
+    setBusy(true)
+    api.name(name)
+      .then(() => refreshSession())
+      .then(() => navigate(afterSignIn(), { replace: true }))
+      .catch((e: Error) => { setFailed(e.message); setBusy(false) })
+  }
+
+  if (nameless) {
+    return (
+      <Page orbs={W9}>
+        <CenterHero title="You are in" bottom={100} sub="One last thing, and only this once." />
+        <Main>
+          <Column width={560}>
+            <Box title="What should people call you?" note="It goes on what you share, and on changes you suggest to other people.">
+              <form onSubmit={save} style={s('display:flex;flex-direction:column;gap:18px;margin-top:-4px')}>
+                <label className="fld">
+                  <span className="lab">Your name</span>
+                  <input className="inp" type="text" required autoComplete="name" maxLength={80} autoFocus
+                    value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Raman" />
+                </label>
+                {failed ? <span className="small" role="alert" style={{ color: '#b4563c' }}>{failed}</span> : null}
+                <button className="btn" type="submit" disabled={busy || !name.trim()} style={s('width:100%;box-sizing:border-box')}>
+                  {busy ? 'Saving it' : 'Carry on'}
+                </button>
+                <span className="small">Signed in as {nameless.email}. Nobody sees your email address.</span>
+              </form>
+            </Box>
+          </Column>
+        </Main>
+      </Page>
+    )
+  }
 
   return (
     <Page orbs={W9}>
