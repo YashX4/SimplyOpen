@@ -18,6 +18,11 @@ import type { Mailer } from './services/mailer.js'
 import type { Storage } from './services/storage.js'
 import type { User } from './types.js'
 import { registerAuth } from './routes/auth.js'
+import { registerAccounts } from './routes/accounts.js'
+import { registerFacts } from './routes/facts.js'
+import { registerCopies } from './routes/copies.js'
+import { registerShelves } from './routes/shelves.js'
+import { registerQuestions } from './routes/questions.js'
 import { registerBrowse } from './routes/browse.js'
 import { registerProjects } from './routes/projects.js'
 import { registerUploads } from './routes/uploads.js'
@@ -34,6 +39,8 @@ export interface AppDeps {
   mailer: Mailer
   /** SimplyOpen Chat. Without it, changing things by chatting says it is not set up. */
   chat?: Chat
+  /** Email addresses of the team, who choose the "Picks from the team" shelf. */
+  teamEmails?: string[]
   /** Where the browser is, for the sign in link. */
   siteUrl?: string
   /**
@@ -105,10 +112,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/health', async () => ({ ok: true }))
 
   await registerAuth(app, deps)
+  await registerAccounts(app, deps)
   await registerBrowse(app, deps)
+  await registerShelves(app, deps)
   await registerProjects(app, deps)
+  await registerFacts(app, deps)
+  await registerQuestions(app, deps)
   await registerUploads(app, deps)
   await registerSuggestions(app, deps)
+  await registerCopies(app, deps)
   await registerMe(app, deps)
   await registerChat(app, deps)
 

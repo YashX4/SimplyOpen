@@ -5,7 +5,9 @@
  * A session is one person's private copy of an uploaded project plus one
  * conversation about it ("Make my copy"):
  *
- * - `POST   /sessions`                          upload the project zip (multipart field "file")
+ * - `POST   /sessions`                          upload the project zip (multipart field "file"); optional field
+ *                                                "earlier": a JSON list of { role, text } from an earlier chat
+ *                                                about this copy, so Claude picks up where they left off
  *                                                → 201 `{ sessionId, files, version }` (version 0, "Your copy")
  * - `POST   /sessions/:id/messages`             JSON `{ message, confirmPrivate? }`
  *                                                → 200 a reply `{ kind: "reply", reply, version, readyToDownload, stoppedEarly }`
@@ -37,7 +39,7 @@ import multipart from "@fastify/multipart";
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { ChatBusyError, ChatModelError, ChatSession, HttpProjectChecker, ProjectFileError, ProjectFolder, type ChatSessionOptions } from "./chat.js";
+import { ChatBusyError, ChatModelError, ChatSession, HttpProjectChecker, ProjectFileError, ProjectFolder, type ChatSessionOptions, type EarlierMessage } from "./chat.js";
 import { packFiles, unpackZip, ZipError } from "./zip.js";
 
 /** Longest message accepted from a person, in characters. */
@@ -77,7 +79,7 @@ export async function buildServer(options: ChatServerOptions = {}): Promise<Fast
   const sessions = new Map<string, OpenSession>();
 
   const app = Fastify({ logger: options.logger ?? true });
-  await app.register(multipart, { limits: { fileSize: maxUploadBytes, files: 1, fields: 10, fieldSize: 1024, parts: 11 } });
+  await app.register(multipart, { limits: { fileSize: maxUploadBytes, files: 1, fields: 10, fieldSize: 400_000, parts: 11 } });
 
   const close = async (id: string): Promise<void> => {
     const open = sessions.get(id);
@@ -111,9 +113,13 @@ export async function buildServer(options: ChatServerOptions = {}): Promise<Fast
     if (sessions.size >= maxSessions) return send(reply, 429, "TOO_MANY_SESSIONS", "Too many chats are open. Try again later.");
 
     let zip: Buffer | null = null;
+    let earlierText: string | undefined;
     try {
       for await (const part of request.parts()) {
-        if (part.type !== "file") continue;
+        if (part.type !== "file") {
+          if (part.fieldname === "earlier" && typeof part.value === "string") earlierText = part.value;
+          continue;
+        }
         if (part.fieldname !== "file") {
           part.file.resume();
           continue;
@@ -127,6 +133,8 @@ export async function buildServer(options: ChatServerOptions = {}): Promise<Fast
       throw error;
     }
     if (!zip) return send(reply, 400, "NO_FILE", 'No file was uploaded. Send the zip in a field named "file".');
+    const earlier = earlierText === undefined ? [] : parseEarlier(earlierText);
+    if (!earlier) return send(reply, 400, "BAD_EARLIER", '"earlier" must be a JSON list of { "role": "user" or "assistant", "text": "…" }.');
 
     let unpacked;
     try {
@@ -138,7 +146,7 @@ export async function buildServer(options: ChatServerOptions = {}): Promise<Fast
     try {
       const folder = await ProjectFolder.open(unpacked.dir, options.protectedPaths ? { protectedPaths: options.protectedPaths } : {});
       const sessionId = randomUUID();
-      const chat = new ChatSession(folder, options.session);
+      const chat = new ChatSession(folder, { ...options.session, earlier });
       sessions.set(sessionId, { chat, cleanup: unpacked.cleanup, lastUsed: Date.now() });
       return reply.code(201).send({ sessionId, files: await folder.listFiles(), version: chat.versions[0] });
     } catch (error) {
@@ -244,6 +252,24 @@ export async function buildServer(options: ChatServerOptions = {}): Promise<Fast
   });
 
   return app;
+}
+
+/** The "earlier" field: a JSON list of earlier messages, or null if it isn't one. */
+function parseEarlier(text: string): EarlierMessage[] | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(value)) return null;
+  const out: EarlierMessage[] = [];
+  for (const item of value as unknown[]) {
+    const m = item as { role?: unknown; text?: unknown } | null;
+    if (!m || (m.role !== "user" && m.role !== "assistant") || typeof m.text !== "string") return null;
+    out.push({ role: m.role, text: m.text });
+  }
+  return out;
 }
 
 /** A version number from a URL, or null if it isn't one of the session's versions. */

@@ -25,8 +25,15 @@ export type ChatAnswer =
     }
   | { kind: 'privacy_reminder'; reminder: string; found: string[] }
 
+/** One message of an earlier conversation, handed over when a chat is picked up again. */
+export interface EarlierMessage {
+  role: 'user' | 'assistant'
+  text: string
+}
+
 export interface Chat {
-  start(zip: Uint8Array): Promise<{ sessionId: string; version: ChatVersion }>
+  /** `earlier`: what was said before, so Claude carries on rather than starting cold. */
+  start(zip: Uint8Array, earlier?: EarlierMessage[]): Promise<{ sessionId: string; version: ChatVersion }>
   send(id: string, message: string, confirmPrivate: boolean, signal?: AbortSignal): Promise<ChatAnswer>
   versions(id: string): Promise<ChatVersion[]>
   undo(id: string): Promise<ChatVersion | null>
@@ -70,8 +77,9 @@ export class HttpChat implements Chat {
     return new Uint8Array(await response.arrayBuffer()) as T
   }
 
-  start(zip: Uint8Array) {
+  start(zip: Uint8Array, earlier: EarlierMessage[] = []) {
     const form = new FormData()
+    if (earlier.length > 0) form.append('earlier', JSON.stringify(earlier))
     form.append('file', new Blob([zip as BlobPart], { type: 'application/zip' }), 'project.zip')
     return this.call<{ sessionId: string; version: ChatVersion }>('/sessions', { method: 'POST', body: form })
   }

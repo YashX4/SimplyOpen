@@ -8,7 +8,7 @@
  * Request: `multipart/form-data` with the zip in a file field named `file`.
  *
  * Responses:
- * - `200` `{ manifest, name, description }`. The analyzer's `rawModelOutput`
+ * - `200` `{ manifest, name, description, status }`. The analyzer's `rawModelOutput`
  *   is written to the server log and never sent to the client: it is for
  *   debugging only and must not reach downstream consumers.
  * - Errors: `{ error: { code, message } }` with
@@ -99,7 +99,7 @@ export async function buildServer(options: ServerOptions = {}): Promise<FastifyI
       } else {
         const result = await analyze(zipPath, aborter.signal);
         request.log.info({ rawModelOutput: result.rawModelOutput }, "analysis complete");
-        const body: AnalyzeResponse = { manifest: result.manifest, name: result.name, description: result.description };
+        const body: AnalyzeResponse = { manifest: result.manifest, name: result.name, description: result.description, status: result.status };
         outcome = { status: 200, body };
       }
     } catch (error) {

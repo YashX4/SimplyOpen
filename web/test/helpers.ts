@@ -7,6 +7,7 @@ import type { Analyzer, AnalyzeResult, Manifest } from '../src/services/analyzer
 import type { Factory, RunState } from '../src/services/factory.js'
 import * as users from '../src/repo/users.js'
 import { ChatError, type Chat, type ChatAnswer, type ChatVersion } from '../src/services/chat.js'
+import type { EarlierMessage } from '../src/services/chat.js'
 
 export function manifest(over: Partial<Manifest> = {}): Manifest {
   return {
@@ -58,8 +59,12 @@ export class FakeChat implements Chat {
   readonly sessions = new Map<string, { versions: ChatVersion[]; zip: Uint8Array }>()
   private n = 0
 
-  async start(zip: Uint8Array) {
+  /** The earlier conversation each session was started with (empty for a brand new chat). */
+  readonly earlier: EarlierMessage[][] = []
+
+  async start(zip: Uint8Array, earlier: EarlierMessage[] = []) {
     this.started.push(zip)
+    this.earlier.push(earlier)
     const sessionId = `s${++this.n}`
     const v0: ChatVersion = { number: 0, label: 'Your copy', createdAt: new Date().toISOString(), changes: [] }
     this.sessions.set(sessionId, { versions: [v0], zip })

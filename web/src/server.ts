@@ -65,6 +65,7 @@ async function main(): Promise<void> {
     mailer: new ConsoleMailer(),
     // SimplyOpen Chat, from chat/ in this repository. It listens on 3100.
     chat: env.CHAT_URL ? new HttpChat(env.CHAT_URL) : undefined,
+    teamEmails: (env.TEAM_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean),
     // Where the website is, because the sign in link opens the website.
     siteUrl: env.SITE_URL ?? 'http://localhost:5173',
     // No email is really sent, so on your own computer the page gets the link too.
