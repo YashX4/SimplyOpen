@@ -10,6 +10,15 @@
 #       { "ref": "main", "inputs": { "build_id": "...", "project_url": "...",
 #                                    "app_url": "...", "sample_url": "..." } }
 #     The run is then titled "Build <build_id>", which is how to find it again.
+#
+# Where the finished apps go:
+#   - Every run: under "Artifacts" on the run's page (needs a GitHub login).
+#   - Runs started by hand or by the website: also on a public release named
+#     build-<build_id>, which anyone can download from without logging in:
+#       https://github.com/<owner>/<repo>/releases/download/build-<build_id>/app-mac.zip
+#       https://github.com/<owner>/<repo>/releases/download/build-<build_id>/app-windows.zip
+#       https://github.com/<owner>/<repo>/releases/download/build-<build_id>/app-linux.zip
+#     A system whose build or test failed has no file there.
 
 name: Build apps
 run-name: Build ${{ inputs.build_id || 'example project' }}
@@ -119,3 +128,59 @@ jobs:
           name: app-${{ matrix.system }}
           path: runner/dist/*.zip
           if-no-files-found: error
+
+  # Puts the finished apps somewhere anyone can download them. This job never
+  # runs uploaded code: it only moves the files the build job produced. That is
+  # why it, and not the build job, is allowed to write to the repository.
+  publish:
+    name: Publish downloads
+    needs: build
+    # Only for builds someone asked for, and even if one system failed, so the
+    # systems that did pass are still published.
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      BUILD_ID: ${{ inputs.build_id }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - name: Check the build id is safe to use in a web address
+        run: |
+          if ! [[ "$BUILD_ID" =~ ^[A-Za-z0-9._-]{1,64}$ ]]; then
+            echo "build_id may only contain letters, numbers, dots, dashes and underscores."
+            exit 1
+          fi
+
+      - name: Collect the apps that passed
+        uses: actions/download-artifact@v8
+        with:
+          pattern: app-*
+          path: apps
+
+      - name: Give each app a fixed file name
+        run: |
+          mkdir out
+          for system in Mac Windows Linux; do
+            zip=$(find "apps/app-$system" -name '*.zip' 2>/dev/null | head -n 1)
+            if [ -n "$zip" ]; then
+              cp "$zip" "out/app-$(echo "$system" | tr '[:upper:]' '[:lower:]').zip"
+            fi
+          done
+          ls -l out
+          if [ -z "$(ls out)" ]; then
+            echo "No system produced an app, so there is nothing to publish."
+            exit 1
+          fi
+
+      - name: Publish to a release
+        run: |
+          tag="build-$BUILD_ID"
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --title "Build $BUILD_ID" \
+              --notes "Apps built by the SimplyOpen Factory. Each was started and tested before being published."
+          fi
+          gh release upload "$tag" out/*.zip --clobber
+          echo "Published: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$tag"

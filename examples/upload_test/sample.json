@@ -1,0 +1,9 @@
+{
+  "values": {
+    "transcripts": [
+      "sample.vtt"
+    ],
+    "output_dir": "{temp}",
+    "keep_timestamps": true
+  }
+}
