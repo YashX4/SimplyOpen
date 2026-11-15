@@ -32,6 +32,12 @@ export interface RunState {
   artifacts: { platform: Platform; name: string; id: number; size: number }[]
   /** The picture of the app's window the Mac build took, if it took one. */
   picture?: { id: number; size: number }
+  /**
+   * The same apps as public release files, once the run published them.
+   * Anyone can download these straight from GitHub, with no account and no
+   * trip through our server, so they are preferred over `artifacts`.
+   */
+  releases?: { platform: Platform; url: string; size: number }[]
 }
 
 export interface Factory {
@@ -130,8 +136,24 @@ export class GithubFactory implements Factory {
 
     const finished = run.status === 'completed'
     const artifacts: RunState['artifacts'] = []
+    const releases: NonNullable<RunState['releases']> = []
     let picture: RunState['picture']
     if (finished) {
+      // The workflow's last job publishes each app as release "build-<id>",
+      // file "app-<system>.zip". A run that published nothing has no release.
+      const release = await this.api(`/releases/tags/build-${encodeURIComponent(buildId)}`)
+      if (release.ok) {
+        const data = (await release.json()) as {
+          assets?: { name: string; state: string; size: number; browser_download_url: string }[]
+        }
+        for (const asset of data.assets ?? []) {
+          const match = /^app-(mac|windows|linux)\.zip$/.exec(asset.name)
+          if (match && asset.state === 'uploaded') {
+            releases.push({ platform: match[1] as Platform, url: asset.browser_download_url, size: asset.size })
+          }
+        }
+      }
+
       const list = await this.api(`/actions/runs/${run.id}/artifacts`)
       if (list.ok) {
         const data = (await list.json()) as {
@@ -148,7 +170,7 @@ export class GithubFactory implements Factory {
         }
       }
     }
-    return { found: true, finished, platforms, runId: run.id, artifacts, ...(picture ? { picture } : {}) }
+    return { found: true, finished, platforms, runId: run.id, artifacts, releases, ...(picture ? { picture } : {}) }
   }
 
   async download(artifactId: number): Promise<Uint8Array> {

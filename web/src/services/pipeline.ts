@@ -184,6 +184,20 @@ export async function refresh(deps: PipelineDeps, versionId: string): Promise<Re
     })
   }
 
+  // Best of all, the run published the app as a public release file: point
+  // the download straight at it. The browser then fetches it from GitHub
+  // itself, starts at once and shows its own progress. This also replaces
+  // an earlier answer that left a big app to be streamed through us.
+  for (const release of state.releases ?? []) {
+    const current = await versionsRepo.buildFor(db, versionId, release.platform)
+    if (!current || current.status !== 'ready' || current.download_url) continue
+    await buildsRepo.update(db, versionId, release.platform, {
+      status: 'ready',
+      download_url: release.url,
+      size_bytes: release.size,
+    })
+  }
+
   // Only once the run is over are the zips there to collect. A built app
   // with a bundled Python goes past what a free object store will take, so
   // anything too big stays with the Factory and the download route streams

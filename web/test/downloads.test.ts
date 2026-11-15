@@ -121,6 +121,47 @@ describe('an app too big for the object store', () => {
     expect(h.factory.downloads).toEqual([77])
   })
 
+  const RELEASE = 'https://github.com/o/r/releases/download/build-x/app-mac.zip'
+
+  it('sends the person to the public release file when the run published one', async () => {
+    const me = await h.signIn('maker@example.com', 'Maker')
+    const made = await publish(deps(), { owner: me.id, zip: SOME_ZIP })
+    await projects.setVisibility(h.db, made.project.id, 'public')
+    h.factory.state = {
+      found: true, finished: true,
+      platforms: [{ platform: 'mac', status: 'ready', message: '' }],
+      artifacts: [{ platform: 'mac', name: 'app-Mac', id: 79, size: 120 * 1024 * 1024 }],
+      releases: [{ platform: 'mac', url: RELEASE, size: 120 * 1024 * 1024 }],
+    }
+    await refresh(deps(), made.version.id)
+
+    const response = await h.app.inject({ method: 'GET', url: `/api/download/${made.version.id}/mac` })
+    expect(response.statusCode).toBe(302)
+    expect(response.headers.location).toBe(RELEASE)
+    // Neither the refresh nor the download fetched the app through us.
+    expect(h.factory.downloads).toEqual([])
+  })
+
+  it('moves an app that was being streamed over to its release file', async () => {
+    const me = await h.signIn('maker@example.com', 'Maker')
+    const made = await publish(deps(), { owner: me.id, zip: SOME_ZIP })
+    await projects.setVisibility(h.db, made.project.id, 'public')
+    const big = {
+      found: true, finished: true,
+      platforms: [{ platform: 'mac' as const, status: 'ready' as const, message: '' }],
+      artifacts: [{ platform: 'mac' as const, name: 'app-Mac', id: 80, size: 120 * 1024 * 1024 }],
+    }
+    h.factory.state = big
+    await refresh(deps(), made.version.id)
+
+    h.factory.state = { ...big, releases: [{ platform: 'mac', url: RELEASE, size: 1 }] }
+    await refresh(deps(), made.version.id)
+    const response = await h.app.inject({ method: 'GET', url: `/api/download/${made.version.id}/mac` })
+    expect(response.statusCode).toBe(302)
+    expect(response.headers.location).toBe(RELEASE)
+    expect(h.factory.downloads).toEqual([])
+  })
+
   it('still copies one that fits, and redirects to it', async () => {
     const me = await h.signIn('maker@example.com', 'Maker')
     const made = await publish(deps(), { owner: me.id, zip: SOME_ZIP })
