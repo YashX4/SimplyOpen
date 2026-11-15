@@ -138,3 +138,20 @@ describe('an app too big for the object store', () => {
     expect(h.factory.downloads).toEqual([78])
   })
 })
+
+describe('checking a download before it starts', () => {
+  it('says plainly when a ready build points at a file that is not there', async () => {
+    const { harness } = await import('./helpers.js')
+    const h = await harness()
+    try {
+      const page = await h.app.inject({ method: 'GET', url: '/api/projects/zoom-transcripts-to-nvivo' })
+      const id = page.json().version.id as string
+      // The seeded builds point at an address that does not exist.
+      const res = await h.app.inject({ method: 'GET', url: `/api/download/${id}/mac/check` })
+      expect(res.json().ok).toBe(false)
+      expect(res.json().reason).toMatch(/missing/)
+      const bad = await h.app.inject({ method: 'GET', url: `/api/download/${id}/amiga/check` })
+      expect(bad.json().ok).toBe(false)
+    } finally { await h.close() }
+  })
+})

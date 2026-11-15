@@ -97,6 +97,40 @@ export async function registerProjects(app: FastifyInstance, deps: AppDeps): Pro
     },
   )
 
+  /**
+   * W8 asks this before it starts a download, so a missing file is said out
+   * loud instead of failing silently in a hidden frame. It never fetches the
+   * file itself, only asks whether it is there.
+   */
+  app.get<{ Params: { id: string; platform: string } }>(
+    '/api/download/:id/:platform/check',
+    async (request, reply) => {
+      const platform = request.params.platform.toLowerCase() as Platform
+      if (!PLATFORMS.has(platform)) return reply.send({ ok: false, reason: 'Ask for mac, windows or linux.' })
+      const version = await versions.byId(deps.db, request.params.id)
+      const project = version ? await projects.byId(deps.db, version.project_id) : null
+      if (!version || !project || !canSee(project, request.viewer?.id ?? null)) {
+        return reply.send({ ok: false, reason: 'There is no version with that id.' })
+      }
+      const build = await versions.buildFor(deps.db, version.id, platform)
+      if (!build || build.status !== 'ready') {
+        return reply.send({ ok: false, reason: build?.message || 'There is no build for that system yet.' })
+      }
+      if (build.artifact_id !== null && !build.download_url) {
+        // Streamed from the build service, which takes a moment to start.
+        return reply.send({ ok: true, slow: true })
+      }
+      if (!build.download_url) return reply.send({ ok: false, reason: 'That build is not ready to download yet.' })
+      try {
+        const head = await fetch(build.download_url, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
+        if (head.ok) return reply.send({ ok: true, slow: false })
+      } catch {
+        // falls through: the address does not answer
+      }
+      return reply.send({ ok: false, reason: 'The file for this build is missing. It needs to be built again before anyone can get it.' })
+    },
+  )
+
   /** P6 asks this until the three systems settle. */
   app.post<{ Params: { id: string } }>('/api/versions/:id/refresh', async (request, reply) => {
     const version = await versions.byId(deps.db, request.params.id)

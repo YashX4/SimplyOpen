@@ -252,6 +252,8 @@ export const api = {
     return call<UploadResult>('/api/projects', { method: 'POST', body: form, signal })
   },
   downloadUrl: (versionId: string, platform: Platform) => `/api/download/${versionId}/${platform}`,
+  checkDownload: (versionId: string, platform: Platform) =>
+    get<{ ok: boolean; slow?: boolean; reason?: string }>(`/api/download/${versionId}/${platform}/check`),
 
   /* Changing it by chatting, C1 to C11, and copies, Y1 to Y3. */
   chatOnMine: (slug: string) => post<ChatStart>(`${slugged(slug)}/chats`),

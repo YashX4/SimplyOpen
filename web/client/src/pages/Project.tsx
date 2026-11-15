@@ -176,6 +176,21 @@ export function Project() {
   const [sheet, setSheet] = useState<{ id: string; builds: Build[]; start: Platform; checked: boolean } | null>(null)
   const [older, setOlder] = useState<{ page: ProjectPage; newest: number } | null>(null)
 
+  // Builds only move on when somebody asks the build service. While any are
+  // still going, this page asks, so leaving the progress page loses nothing.
+  const versionId = page?.version.id
+  const pending = page?.builds.some((b) => b.status === 'waiting' || b.status === 'building') ?? false
+  useEffect(() => {
+    if (!versionId || !pending) return
+    let live = true
+    const timer = window.setInterval(() => {
+      api.refresh(versionId)
+        .then((r) => { if (live) setPage((now) => (now && now.version.id === versionId ? { ...now, builds: r.builds } : now)) })
+        .catch(() => undefined)
+    }, 8000)
+    return () => { live = false; window.clearInterval(timer) }
+  }, [versionId, pending])
+
   // A new version is built after it is made. Until it is, offer the newest one
   // that is ready rather than nothing, and say so.
   useEffect(() => {

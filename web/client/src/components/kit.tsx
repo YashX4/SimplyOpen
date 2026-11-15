@@ -385,8 +385,18 @@ export function GetItSheet({
   const ready = ORDER.filter((p) => builds.some((b) => b.platform === p && b.status === 'ready'))
   const [platform, setPlatform] = useState<Platform>(ready.includes(start) ? start : ready[0] ?? start)
   const [round, setRound] = useState(0)
+  const [check, setCheck] = useState<{ ok: boolean; slow?: boolean; reason?: string } | null>(null)
   const close = useRef<HTMLButtonElement>(null)
-  const build = builds.find((b) => b.platform === platform)
+
+  // Ask first, so a missing file is said out loud rather than failing in a hidden frame.
+  useEffect(() => {
+    let live = true
+    setCheck(null)
+    api.checkDownload(versionId, platform)
+      .then((c) => { if (live) setCheck(c) })
+      .catch(() => { if (live) setCheck({ ok: false, reason: 'The website could not reach its server to start the download.' }) })
+    return () => { live = false }
+  }, [versionId, platform, round])
 
   useEffect(() => {
     close.current?.focus()
@@ -399,7 +409,7 @@ export function GetItSheet({
     <>
       <div className="scrim live" aria-hidden="true" onClick={onClose} />
       <div className="panel sheet live" role="dialog" aria-modal="true" aria-label={`Getting ${name}`}>
-        {build?.status === 'ready' ? (
+        {check?.ok ? (
           <iframe key={`${platform}${round}`} title="download" src={api.downloadUrl(versionId, platform)} style={{ display: 'none' }} />
         ) : null}
         <div style={s('display:flex;align-items:flex-start;gap:16px')}>
@@ -421,13 +431,18 @@ export function GetItSheet({
           </div>
         ) : null}
         <div style={s('display:flex;flex-direction:column;gap:0')}>
-          <div className="prob" style={{ padding: '18px 0' }}>
-            <Mark kind="now" />
+          <div className="prob" style={{ padding: '18px 0' }} role="status">
+            <Mark kind={check && !check.ok ? 'bad' : 'now'} />
             <span style={s('display:flex;flex-direction:column;gap:5px;flex:1')}>
-              <span className="h3">Downloading it for {SYSTEM_NAME[platform]}</span>
+              <span className="h3">
+                {!check ? 'Getting it ready' : check.ok ? `Downloading it for ${SYSTEM_NAME[platform]}` : 'This download is not there'}
+              </span>
               <span className="body">
-                Your browser shows it as it arrives.
-                <span className="bar" aria-hidden="true" style={{ display: 'block' }}><i /></span>
+                {!check ? 'Checking the file is where it should be.'
+                  : !check.ok ? check.reason
+                  : check.slow ? 'This one is big, so it can take up to a minute to start. Your browser shows it as it arrives.'
+                  : 'Your browser shows it as it arrives.'}
+                {!check || check.ok ? <span className="bar" aria-hidden="true" style={{ display: 'block' }}><i /></span> : null}
               </span>
             </span>
           </div>
