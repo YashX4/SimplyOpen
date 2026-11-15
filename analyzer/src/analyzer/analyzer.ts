@@ -1,9 +1,11 @@
 /**
  * @file `analyzeZip`: an uploaded zip in, a validated manifest plus a
- * plain-English name and description out.
+ * plain-English name and description out, with a status saying how much of
+ * the project was read and whether keys were left in it.
  *
- * Pipeline: extract to a request-scoped temp dir → build the bounded
- * project summary → ask Claude (with an explicit note listing omitted files
+ * Pipeline: extract to a request-scoped temp dir → scan every file for
+ * leaked keys and build the bounded project summary (with any keys blanked
+ * out, so they never reach Claude) → ask Claude (with an explicit note listing omitted files
  * when the summary is truncated) → validate the answer → if invalid, retry
  * exactly once with the problems appended → return, or throw. The temp dir
  * is always deleted.
@@ -15,6 +17,7 @@
 import { AnthropicClaudeClient, type ClaudeClient, type RawAnalysis } from "./claudeClient.js";
 import { AnalysisFailedError, SchemaValidationError } from "./errors.js";
 import { buildProjectSummary, extractZip } from "./projectSummary.js";
+import { redactSecrets, scanForSecrets, type LeakedKey } from "./secretScan.js";
 import type { Manifest } from "../manifest/schema.js";
 import manifestJsonSchema from "../manifest/schema.json" with { type: "json" };
 
@@ -27,13 +30,47 @@ export interface AnalysisResult {
   manifest: Manifest;
   /** A few human-readable words naming the project. */
   name: string;
-  /** One to three plain-English sentences for people who have never coded. */
+  /** What it does: one or two plain-English sentences for people who have never coded, at most {@link MAX_DESCRIPTION_LENGTH} characters. */
   description: string;
+  /** Facts about the analysis itself, for "Read the files" and "Checked for leaked keys". See {@link AnalysisStatus}. */
+  status: AnalysisStatus;
   /**
    * The model's raw reply, one entry per attempt (one, or two after a retry).
    * For logging and debugging ONLY: never pass it downstream.
    */
   rawModelOutput: string[];
+}
+
+/**
+ * Facts about how the analysis went, worked out by code (not by Claude), for
+ * the project page's "Read the files" and "Checked for leaked keys" lines.
+ * Facts only: the page's own templates write the sentences.
+ */
+export interface AnalysisStatus {
+  /** "Read the files": how much of the project's code and text Claude read in full. */
+  readTheFiles: {
+    /** True when Claude read every file in full (nothing was left out for size). */
+    complete: boolean;
+    /** Files Claude read in full. */
+    filesRead: number;
+    /** Files whose contents were left out for size (Claude saw only their names, or not even that). */
+    filesNotRead: number;
+    /** Files skipped on purpose because they aren't code or text (images, sounds, archives, dependency and cache folders). */
+    filesSkippedByDesign: number;
+  };
+  /** "Checked for leaked keys": API keys, tokens, private keys and passwords left in the project. */
+  leakedKeys: {
+    /** True when every text file was checked (none was too big to scan). */
+    complete: boolean;
+    /** Text files checked. */
+    filesChecked: number;
+    /** Text files too big to check. */
+    filesNotChecked: number;
+    /** How many likely leaked keys were found. 0 means none. */
+    totalFound: number;
+    /** Where they are and what kind they look like (the first 50). Never the keys themselves. */
+    found: LeakedKey[];
+  };
 }
 
 /** Optional settings for {@link analyzeZip}. */
@@ -57,7 +94,7 @@ const MAX_ATTEMPTS = 2;
  * @param client Model client. Defaults to a new {@link AnthropicClaudeClient}
  *   using credentials from the environment. Pass a fake in tests.
  * @param options See {@link AnalyzeOptions}.
- * @returns The validated manifest, name and description, plus raw model output for logs.
+ * @returns The validated manifest, name and description, the status, plus raw model output for logs.
  * @throws {UnzipError} The archive is missing, not a zip, unsafe, over a limit, or empty.
  * @throws {ClaudeApiError} The model call failed, timed out, was cancelled, or was refused. Not retried.
  * @throws {AnalysisFailedError} Both attempts produced an invalid answer. Its `cause` is a
@@ -71,7 +108,22 @@ export async function analyzeZip(
   const signal = options.signal ?? new AbortController().signal;
   const { dir, cleanup } = await extractZip(zipPath, {}, options.tmpRoot);
   try {
-    const summary = await buildProjectSummary(dir);
+    const [built, scan] = await Promise.all([buildProjectSummary(dir), scanForSecrets(dir)]);
+    // Keys left in the project are blanked out before anything is sent to Claude.
+    const summary: ProjectSummary = {
+      ...built,
+      includedFiles: new Map([...built.includedFiles].map(([p, text]) => [p, redactSecrets(text, p)])),
+      keyLines: built.keyLines.map((k) => ({ ...k, text: redactSecrets(k.text, k.path) })),
+    };
+    const status: AnalysisStatus = {
+      readTheFiles: {
+        complete: !summary.truncated,
+        filesRead: summary.includedFiles.size,
+        filesNotRead: summary.skippedFiles.length,
+        filesSkippedByDesign: summary.excludedFileCount,
+      },
+      leakedKeys: scan,
+    };
     // When contents were cut, tell the model exactly which files it can't see.
     const omittedFiles = summary.truncated ? summary.skippedFiles : [];
 
@@ -84,7 +136,7 @@ export async function analyzeZip(
 
       const checked = checkAnswer(raw, summary);
       if (checked.ok) {
-        return { manifest: checked.manifest, name: checked.name, description: checked.description, rawModelOutput };
+        return { manifest: checked.manifest, name: checked.name, description: checked.description, status, rawModelOutput };
       }
       issues = checked.issues;
     }
@@ -121,8 +173,14 @@ function checkAnswer(raw: RawAnalysis, summary: ProjectSummary): Checked {
 function checkName(name: unknown): string[] {
   if (typeof name !== "string" || name.trim() === "") return ["/name: must be a non-empty string"];
   const words = name.trim().split(/\s+/).length;
-  return name.trim().length > 60 || words > 8 ? ["/name: must be a few words (at most 8 words and 60 characters)"] : [];
+  return name.trim().length > MAX_NAME_LENGTH || words > 8 ? [`/name: must be a few words (at most 8 words and ${MAX_NAME_LENGTH} characters)`] : [];
 }
+
+/** Longest allowed name, in characters (the project page's limit). */
+export const MAX_NAME_LENGTH = 60;
+
+/** Longest allowed description ("What it does" on the project page), in characters. */
+export const MAX_DESCRIPTION_LENGTH = 200;
 
 /** Technical words that must not appear in a description written for people who have never coded. */
 const JARGON = [/\bCLI\b/i, /\bcommand[- ]line\b/i, /\bterminal\b/i, /\bstdin\b/i, /\bstdout\b/i, /\bargv\b/i, /\brepo(sitory)?\b/i];
@@ -130,7 +188,10 @@ const JARGON = [/\bCLI\b/i, /\bcommand[- ]line\b/i, /\bterminal\b/i, /\bstdin\b/
 function checkDescription(description: unknown): string[] {
   if (typeof description !== "string" || description.trim() === "") return ["/description: must be a non-empty string"];
   const issues: string[] = [];
-  if (description.trim().length > 500) issues.push("/description: must be one to three short sentences (at most 500 characters)");
+  const length = description.trim().length;
+  if (length > MAX_DESCRIPTION_LENGTH) {
+    issues.push(`/description: must be at most ${MAX_DESCRIPTION_LENGTH} characters (it is ${length}); say what it does in one or two short sentences`);
+  }
   const found = JARGON.map((re) => description.match(re)?.[0]).filter((w): w is string => w !== undefined);
   if (found.length > 0) issues.push(`/description: must avoid technical words for non-coders (found: ${found.join(", ")})`);
   return issues;
