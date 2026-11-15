@@ -124,8 +124,8 @@ This matters: when confidence is not "high", the app shows a simple general-purp
 When in doubt, choose the lower level. notes: one short plain-English sentence per uncertainty; required whenever overall is not "high".
 
 # Name and description (outside the manifest)
-- name: a few words (at most 6) a non-technical person would recognise, e.g. "Zoom to NVivo Converter". No file names or programming words.
-- description: one to three short sentences for someone who has never coded: what it does for them, what they give it, what they get back. Never use technical words such as CLI, command line, terminal, arguments, stdin, stdout, repo, repository, or package names.`;
+- name: a few words (at most 6, and at most 60 characters) a non-technical person would recognise, e.g. "Zoom to NVivo Converter". No file names or programming words.
+- description: at most 200 characters, one or two short sentences for someone who has never coded: what it does for them, what they give it, what they get back. Never use technical words such as CLI, command line, terminal, arguments, stdin, stdout, repo, repository, or package names.`;
 
 /** "1 file" / "3 files". */
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`;

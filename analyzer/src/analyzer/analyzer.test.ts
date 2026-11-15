@@ -269,6 +269,120 @@ describe("analyzeZip with a mocked Claude client", () => {
   });
 });
 
+describe("status: Read the files, and Checked for leaked keys", () => {
+  // Fake keys are assembled at run time so no key-shaped string is ever committed.
+  const fake = {
+    openai: `sk-proj-${"A1b2C3d4".repeat(5)}`,
+    aws: `AKIA${"ABCDEFGH23456789"}`,
+    github: `ghp_${"x9Y8z7W6".repeat(5)}`,
+    anthropic: `sk-ant-api03-${"Q".repeat(30)}`,
+    envSecret: "s3cr3t-value-123456",
+    envToken: "t0ken-value-987654",
+    urlPassword: "hunter2hunter2",
+  };
+
+  /** A small project with keys left in it, zipped. */
+  async function zipLeakyProject(): Promise<string> {
+    const dir = await mkdtemp(path.join(workDir, "leaky-"));
+    await writeFile(path.join(dir, "main.py"), `import os\nOPENAI_KEY = "${fake.openai}"\n\nif __name__ == "__main__":\n    print("hi")\n`);
+    await writeFile(path.join(dir, "config.txt"), `aws = ${fake.aws}\nclean line\ngithub = ${fake.github}\n`);
+    await writeFile(path.join(dir, "notes.md"), `Anthropic key: ${fake.anthropic}\nrepo: https://me:${fake.urlPassword}@github.com/me/x.git\n`);
+    await writeFile(path.join(dir, ".env"), `API_KEY=${fake.envSecret}\nDEBUG=true\nPASSWORD=changeme\nTOKEN=${fake.envToken}\n`);
+    await writeFile(path.join(dir, ".env.example"), "API_KEY=your-api-key-here\nTOKEN=a-real-looking-value-here\n"); // an example file is meant to be shared
+    await writeFile(path.join(dir, "deploy_key"), `-----BEGIN OPENSSH ${"PRIVATE KEY"}-----\nb3BlbnNzaC1rZXktdjEAAAA\n-----END OPENSSH ${"PRIVATE KEY"}-----\n`);
+    return zipDirectory(dir, path.join(workDir, "leaky.zip"));
+  }
+
+  it("finds each leaked key by file, line and kind, without ever reporting the key itself", async () => {
+    const { client } = recordingClient();
+    const { status } = await analyzeZip(await zipLeakyProject(), client, { tmpRoot });
+
+    expect(status.leakedKeys.found).toEqual([
+      { path: ".env", line: 1, kind: "Secret in an environment file" },
+      { path: ".env", line: 4, kind: "Secret in an environment file" },
+      { path: "config.txt", line: 1, kind: "AWS access key" },
+      { path: "config.txt", line: 3, kind: "GitHub token" },
+      { path: "deploy_key", line: 1, kind: "Private key" },
+      { path: "main.py", line: 2, kind: "OpenAI API key" },
+      { path: "notes.md", line: 1, kind: "Anthropic API key" },
+      { path: "notes.md", line: 2, kind: "Password in a web address" },
+    ]);
+    expect(status.leakedKeys).toMatchObject({ complete: true, totalFound: 8, filesNotChecked: 0 });
+    expect(JSON.stringify(status)).not.toMatch(new RegExp(Object.values(fake).join("|")));
+  });
+
+  it("blanks leaked keys out of everything sent to Claude", async () => {
+    const { client, calls } = recordingClient();
+    await analyzeZip(await zipLeakyProject(), client, { tmpRoot });
+    const sent = JSON.stringify([...calls[0]!.summary.includedFiles, ...calls[0]!.summary.keyLines]);
+
+    for (const [name, value] of Object.entries(fake)) expect(sent, name).not.toContain(value);
+    expect(sent).toContain("[REDACTED OpenAI API key]");
+    expect(sent).toContain("[REDACTED Private key]");
+    expect(sent).not.toContain("b3BlbnNzaC1rZXktdjEAAAA"); // the private key's body, not just its first line
+    expect(sent).toContain("DEBUG=true"); // ordinary settings are left alone
+    expect(sent).toContain("TOKEN=a-real-looking-value-here"); // ...and so are example files
+  });
+
+  it("blanks a leaked key out of a key line, from a file too big to send whole", async () => {
+    const dir = await mkdtemp(path.join(workDir, "big-leaky-"));
+    const filler = Array.from({ length: 1500 }, (_, i) => `def step_${i}(x):\n    return x + ${i}\n`).join("\n");
+    await writeFile(path.join(dir, "main.py"), `import os\n${filler}\nKEY = os.getenv("OPENAI_API_KEY", "${fake.openai}")\n\nif __name__ == "__main__":\n    print(KEY)\n`);
+    const { client, calls } = recordingClient();
+    const { status } = await analyzeZip(await zipDirectory(dir, path.join(workDir, "big-leaky.zip")), client, { tmpRoot });
+    const { summary } = calls[0]!;
+
+    expect(summary.includedFiles.has("main.py")).toBe(false); // too big, so only its key lines were sent
+    const keyLine = summary.keyLines.find((k) => k.text.includes("getenv"));
+    expect(keyLine?.text).toBe('KEY = os.getenv("OPENAI_API_KEY", "[REDACTED OpenAI API key]")');
+    expect(status.leakedKeys.found).toEqual([{ path: "main.py", line: keyLine!.line, kind: "OpenAI API key" }]);
+  });
+
+  it("a clean project: nothing found, and every file read and checked", async () => {
+    const { client } = recordingClient();
+    const { status } = await analyzeZip(zips["transcript-python"], client, { tmpRoot });
+    expect(status).toEqual({
+      readTheFiles: { complete: true, filesRead: 1, filesNotRead: 0, filesSkippedByDesign: 0 },
+      leakedKeys: { complete: true, filesChecked: 1, filesNotChecked: 0, totalFound: 0, found: [] },
+    });
+  });
+
+  it("a big project: says the files were only partly read", async () => {
+    const { client } = recordingClient();
+    const { status } = await analyzeZip(zips["big-project"], client, { tmpRoot });
+    expect(status.readTheFiles.complete).toBe(false);
+    expect(status.readTheFiles.filesNotRead).toBeGreaterThan(0);
+    expect(status.readTheFiles.filesRead + status.readTheFiles.filesNotRead).toBe(41); // main.py + 40 helpers
+    expect(status.leakedKeys.complete).toBe(true);
+  });
+
+  it("a text file too big to scan makes the key check incomplete; images don't count", async () => {
+    const dir = await mkdtemp(path.join(workDir, "huge-"));
+    await writeFile(path.join(dir, "main.py"), 'if __name__ == "__main__":\n    print("hi")\n');
+    await writeFile(path.join(dir, "data.csv"), "a,b\n".repeat(700_000)); // 2.8 MB of text
+    await writeFile(path.join(dir, "photo.png"), Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0]), Buffer.alloc(3_000_000)]));
+    const { client } = recordingClient();
+    const { status } = await analyzeZip(await zipDirectory(dir, path.join(workDir, "huge.zip")), client, { tmpRoot });
+    expect(status.leakedKeys).toMatchObject({ complete: false, filesChecked: 1, filesNotChecked: 1, totalFound: 0 });
+  });
+
+  it("a description over 200 characters is rejected and explained on the retry", async () => {
+    const calls: RecordedCall[] = [];
+    const client: ClaudeClient = {
+      async analyzeProject(summary, _signal, extras) {
+        calls.push({ summary, extras });
+        const answer = evidenceBasedFake(summary);
+        return calls.length === 1 ? { ...answer, description: "Resizes pictures. ".repeat(12) } : answer;
+      },
+    };
+    const result = await analyzeZip(zips["transcript-python"], client, { tmpRoot });
+    expect(calls[1]!.extras?.retry?.issues).toContain(
+      "/description: must be at most 200 characters (it is 215); say what it does in one or two short sentences",
+    );
+    expect(result.description.length).toBeLessThanOrEqual(200);
+  });
+});
+
 /* ------------------------------------------------------------------------ */
 /* Mock Claude client                                                       */
 /* ------------------------------------------------------------------------ */
