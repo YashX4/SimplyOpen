@@ -79,6 +79,9 @@ export interface VersionDetail {
   check: Check | null
   author_name: string
   suggester_name: string | null
+  /** When it came from a suggestion: which one, and its Before and Now rows. */
+  suggestion_id: string | null
+  changes: { title: string; before_text: string; after_text: string }[]
 }
 
 export async function detail(db: Db, versionId: string): Promise<VersionDetail | null> {
@@ -98,12 +101,26 @@ export async function detail(db: Db, versionId: string): Promise<VersionDetail |
   const suggester = version.suggested_by
     ? one(await db.query<{ name: string }>('select name from users where id = $1', [version.suggested_by]))
     : null
+  const from = one(
+    await db.query<{ id: string }>('select id from suggestions where taken_version_id = $1', [versionId]),
+  )
+  const changes = from
+    ? (
+        await db.query<{ title: string; before_text: string; after_text: string }>(
+          `select title, before_text, after_text from suggestion_changes
+           where suggestion_id = $1 and included order by position`,
+          [from.id],
+        )
+      ).rows
+    : []
   return {
     version,
     builds,
     check,
     author_name: author?.name ?? '',
     suggester_name: suggester?.name ?? null,
+    suggestion_id: from?.id ?? null,
+    changes,
   }
 }
 

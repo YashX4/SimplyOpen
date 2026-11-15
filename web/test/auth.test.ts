@@ -7,7 +7,7 @@ beforeEach(async () => { h = await harness() })
 afterEach(async () => { await h.close() })
 
 function tokenFrom(text: string): string {
-  return new URL(text.split('\n').find((l) => l.includes('/api/auth/callback'))!.trim()).searchParams.get('token')!
+  return new URL(text.split('\n').find((l) => l.includes('/sign-in/done'))!.trim()).searchParams.get('token')!
 }
 
 describe('signing in', () => {

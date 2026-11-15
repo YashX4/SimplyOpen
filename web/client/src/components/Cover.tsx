@@ -89,6 +89,10 @@ export function Cover({ slug }: { slug: string }) {
 }
 
 /** The small version that sits at the left of a search result. */
+export function tintFor(slug: string): string {
+  return TINTS[hash(slug) % TINTS.length] ?? '#2f6f6a'
+}
+
 export function Thumb({ slug }: { slug: string }) {
   const tint = TINTS[hash(slug) % TINTS.length] ?? '#2f6f6a'
   return (

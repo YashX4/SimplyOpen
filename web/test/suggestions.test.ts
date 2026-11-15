@@ -139,6 +139,19 @@ describe('the maker deciding', () => {
     expect(latest!.note).toBe('Also saves a spreadsheet.')
   })
 
+  it('the version it made carries the plain words, which V2 shows', async () => {
+    const { suggestion } = await waiting()
+    const mine = await maker()
+    const taken = await h.app.inject({
+      method: 'POST', url: `/api/suggestions/${suggestion.id}/take`,
+      headers: { cookie: mine.cookie }, payload: {},
+    })
+    const detail = await h.app.inject({ method: 'GET', url: `/api/versions/${taken.json().version.id}` })
+    expect(detail.json().suggester_name).toBe('Tomás Medina')
+    expect(detail.json().suggestion_id).toBe(suggestion.id)
+    expect(detail.json().changes.map((c: { title: string }) => c.title)).toEqual(CHANGES.map((c) => c.title))
+  })
+
   it('cannot be taken twice', async () => {
     const { suggestion } = await waiting()
     const mine = await maker()

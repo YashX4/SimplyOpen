@@ -62,7 +62,8 @@ async function main(): Promise<void> {
     storage,
     factory,
     mailer: new ConsoleMailer(),
-    siteUrl: env.SITE_URL ?? `http://localhost:${env.PORT ?? 3200}`,
+    // Where the website is, because the sign in link opens the website.
+    siteUrl: env.SITE_URL ?? 'http://localhost:5173',
     logger: true,
   })
 

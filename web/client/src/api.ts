@@ -23,6 +23,63 @@ export interface ProjectSummary {
   systems: Platform[]
 }
 
+export type Visibility = 'private' | 'link' | 'public'
+
+export interface VersionDetail {
+  version: ProjectPage['version'] & { project_id: string }
+  builds: Build[]
+  check: Check | null
+  author_name: string
+  suggester_name: string | null
+  suggestion_id: string | null
+  changes: { title: string; before_text: string; after_text: string }[]
+}
+
+export interface RefreshResult {
+  found: boolean
+  finished: boolean
+  builds: Build[]
+  outcome: 'waiting' | 'all' | 'partial' | 'none'
+}
+
+export interface UploadResult {
+  project: ProjectPage['project']
+  version: { id: string; number: number }
+  builds: Build[]
+  simple_window: boolean
+}
+
+export interface SuggestionDetail {
+  suggestion: {
+    id: string
+    copy_id: string
+    project_id: string
+    author: string
+    note: string
+    state: 'waiting' | 'taken' | 'left' | 'withdrawn'
+    taken_version_id: string | null
+    created_at: string
+  }
+  changes: { id: string; title: string; before_text: string; after_text: string; included: boolean }[]
+  author_name: string
+  project_slug: string
+}
+
+export interface MyThings {
+  made: {
+    project: ProjectPage['project']
+    version: { id: string; number: number; note: string; created_at: string } | null
+    waiting: number
+    stars: number
+  }[]
+  copies: {
+    copy: { id: string; name: string; created_at: string }
+    project: ProjectPage['project'] | null
+    from_version: { id: string; number: number } | null
+  }[]
+  waiting_suggestions: number
+}
+
 export interface Me {
   id: string
   name: string
@@ -67,7 +124,7 @@ export interface ProjectPage {
     slug: string
     name: string
     description: string
-    visibility: 'private' | 'link' | 'public'
+    visibility: Visibility
   }
   owner: { id: string; name: string }
   version: {
@@ -104,7 +161,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
     response = await fetch(path, { ...init, headers: { accept: 'application/json', ...init?.headers } })
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError(UNREACHABLE, 0, 'UNREACHABLE')
   }
   const body = (await response.json().catch(() => null)) as
@@ -122,19 +180,42 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const get = <T,>(path: string) => call<T>(path)
-const post = <T,>(path: string) =>
-  call<T>(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+const send = <T,>(method: 'POST' | 'PATCH', path: string, body: unknown = {}) =>
+  call<T>(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+const post = <T,>(path: string, body?: unknown) => send<T>('POST', path, body)
+const slugged = (slug: string) => `/api/projects/${encodeURIComponent(slug)}`
 
 export const api = {
   browse: () => get<{ projects: ProjectSummary[] }>('/api/browse'),
   search: (q: string) =>
     get<{ q: string; projects: ProjectSummary[] }>(`/api/search?q=${encodeURIComponent(q)}`),
-  project: (slug: string) => get<ProjectPage>(`/api/projects/${encodeURIComponent(slug)}`),
-  versions: (slug: string) =>
-    get<{ versions: VersionRow[] }>(`/api/projects/${encodeURIComponent(slug)}/versions`),
-  me: () => get<{ user: Me | null }>('/api/me'),
-  star: (slug: string) => post<{ stars: number }>(`/api/projects/${encodeURIComponent(slug)}/star`),
-  copy: (slug: string) => post<{ copy: { id: string } }>(`/api/projects/${encodeURIComponent(slug)}/copies`),
+  project: (slug: string) => get<ProjectPage>(slugged(slug)),
+  versions: (slug: string) => get<{ versions: VersionRow[] }>(`${slugged(slug)}/versions`),
+  version: (id: string) => get<VersionDetail>(`/api/versions/${id}`),
+  refresh: (id: string) => post<RefreshResult>(`/api/versions/${id}/refresh`),
+  me: () => get<{ user: Me | null; waiting_suggestions?: number }>('/api/me'),
+  things: () => get<MyThings>('/api/me/things'),
+  star: (slug: string) => post<{ stars: number }>(`${slugged(slug)}/star`),
+  copy: (slug: string) => post<{ copy: { id: string } }>(`${slugged(slug)}/copies`),
+  rename: (slug: string, name: string, description: string) =>
+    send<{ project: ProjectPage['project'] }>('PATCH', slugged(slug), { name, description }),
+  show: (slug: string, visibility: Visibility) =>
+    send<{ visibility: Visibility }>('PATCH', `${slugged(slug)}/visibility`, { visibility }),
+  suggestionsFor: (slug: string) => get<{ suggestions: SuggestionDetail[] }>(`${slugged(slug)}/suggestions`),
+  suggestion: (id: string) => get<SuggestionDetail>(`/api/suggestions/${id}`),
+  take: (id: string, note: string) =>
+    post<{ version: { id: string; number: number; note: string } }>(`/api/suggestions/${id}/take`, { note }),
+  leave: (id: string) => post<{ suggestion: SuggestionDetail['suggestion'] }>(`/api/suggestions/${id}/leave`),
+  emailLink: (email: string) => post<{ sent: true }>('/api/auth/link', { email }),
+  finishSignIn: (token: string) =>
+    get<{ user: Me }>(`/api/auth/callback?token=${encodeURIComponent(token)}`),
+  signOut: () => post<{ signed_out: true }>('/api/auth/sign-out'),
+  /** P1. The zip goes up whole; the answer comes back once it has been read. */
+  upload: (file: File, signal?: AbortSignal) => {
+    const form = new FormData()
+    form.append('file', file, file.name)
+    return call<UploadResult>('/api/projects', { method: 'POST', body: form, signal })
+  },
   downloadUrl: (versionId: string, platform: Platform) => `/api/download/${versionId}/${platform}`,
 }
 
@@ -147,6 +228,7 @@ export const SYSTEM_NAME: Record<Platform, string> = {
 
 export function readableSize(bytes: number | null): string {
   if (!bytes) return ''
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
   return `${Math.round(bytes / (1024 * 1024))} MB`
 }
 
@@ -187,4 +269,29 @@ export function systemsLine(systems: Platform[]): string {
     .map((p) => SYSTEM_NAME[p])
   if (names.length <= 1) return names[0] ?? ''
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
+/** "10 minutes ago", "Yesterday", "3 days ago", then the date. */
+export function readableAgo(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return minutes === 1 ? 'A minute ago' : `${minutes} minutes ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return hours === 1 ? 'An hour ago' : `${hours} hours ago`
+  const days = Math.round(hours / 24)
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  return readableDate(iso)
+}
+
+export const SEEN_BY: Record<Visibility, string> = {
+  private: 'only you can see it',
+  link: 'anyone with the link',
+  public: 'shared',
+}
+
+/** Small numbers as words, the way the boards write them. */
+export function inWords(n: number): string {
+  const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
+  return words[n] ?? String(n)
 }

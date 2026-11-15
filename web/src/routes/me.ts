@@ -20,10 +20,15 @@ export async function registerMe(app: FastifyInstance, deps: AppDeps): Promise<v
          where project_id = $1 and state = 'waiting'`,
         [project.id],
       )
+      const stars = await deps.db.query<{ n: number }>(
+        'select count(*)::int as n from stars where project_id = $1',
+        [project.id],
+      )
       withVersion.push({
         project,
         version: latest,
         waiting: waiting.rows[0]?.n ?? 0,
+        stars: stars.rows[0]?.n ?? 0,
       })
     }
 
