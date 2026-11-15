@@ -1,0 +1,7 @@
+{
+  "values": {
+    "file": "sample/server.log",
+    "top": "5",
+    "output_dir": "{temp}"
+  }
+}

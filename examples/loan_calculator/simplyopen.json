@@ -1,0 +1,115 @@
+{
+  "name": "Loan Calculator",
+  "description": "Work out the monthly payment on a loan and see every payment until it is paid off.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "loan",
+          "path": "loan.py",
+          "working_directory": "",
+          "run_command": "python loan.py {args}",
+          "description": "Works out a loan's payments.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "loan",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "amount",
+        "kind": "number",
+        "label": "Amount borrowed",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 0,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--amount {value}",
+        "env_binding": null
+      },
+      {
+        "id": "rate",
+        "kind": "number",
+        "label": "Yearly interest (percent)",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 0,
+        "max": 100,
+        "secret": false,
+        "cli_binding": "--rate {value}",
+        "env_binding": null
+      },
+      {
+        "id": "years",
+        "kind": "number",
+        "label": "Length of the loan (years)",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 0,
+        "max": 60,
+        "secret": false,
+        "cli_binding": "--years {value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "schedule",
+        "kind": "file",
+        "label": "Payment schedule",
+        "path_pattern": "{output_dir}/loan_schedule.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

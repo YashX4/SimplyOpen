@@ -1,0 +1,7 @@
+{
+  "values": {
+    "file": "sample/week.csv",
+    "hourly_rate": "18",
+    "output_dir": "{temp}"
+  }
+}

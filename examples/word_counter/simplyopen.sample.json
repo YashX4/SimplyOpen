@@ -1,0 +1,8 @@
+{
+  "values": {
+    "file": "sample/story.txt",
+    "top": "10",
+    "ignore_common": true,
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "name": "Password Generator",
+  "description": "Make a list of strong random passwords, saved to a file on your own computer.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "passwords",
+          "path": "passwords.py",
+          "working_directory": "",
+          "run_command": "python passwords.py {args}",
+          "description": "Makes a list of random passwords.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "passwords",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "count",
+        "kind": "number",
+        "label": "How many passwords",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 1,
+        "max": 1000,
+        "secret": false,
+        "cli_binding": "--count {value}",
+        "env_binding": null,
+        "default": 5
+      },
+      {
+        "id": "length",
+        "kind": "number",
+        "label": "Characters in each",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 4,
+        "max": 128,
+        "secret": false,
+        "cli_binding": "--length {value}",
+        "env_binding": null,
+        "default": 16
+      },
+      {
+        "id": "no_symbols",
+        "kind": "boolean",
+        "label": "Letters and digits only",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--no-symbols",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "passwords",
+        "kind": "file",
+        "label": "Passwords",
+        "path_pattern": "{output_dir}/passwords.txt"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

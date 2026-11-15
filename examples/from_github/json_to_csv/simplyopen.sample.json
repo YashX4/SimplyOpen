@@ -1,0 +1,7 @@
+{
+  "values": {
+    "node": "fruit",
+    "file": "samples/sample.json",
+    "output_dir": "{temp}"
+  }
+}

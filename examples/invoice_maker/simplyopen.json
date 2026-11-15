@@ -1,0 +1,147 @@
+{
+  "name": "Invoice Maker",
+  "description": "Turn a list of items and prices into a printable invoice with the totals worked out.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "invoice",
+          "path": "invoice.py",
+          "working_directory": "",
+          "run_command": "python invoice.py {args}",
+          "description": "Makes one invoice from a list of items.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "invoice",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "List of items",
+        "help": "Needs the columns item, quantity and price.",
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "customer",
+        "kind": "text",
+        "label": "Who the invoice is for",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--customer {value}",
+        "env_binding": null
+      },
+      {
+        "id": "seller",
+        "kind": "text",
+        "label": "Who it is from",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--seller {value}",
+        "env_binding": null,
+        "default": "My Business"
+      },
+      {
+        "id": "number",
+        "kind": "text",
+        "label": "Invoice number",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--number {value}",
+        "env_binding": null,
+        "default": "001"
+      },
+      {
+        "id": "tax",
+        "kind": "number",
+        "label": "Tax (percent)",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 0,
+        "max": 100,
+        "secret": false,
+        "cli_binding": "--tax {value}",
+        "env_binding": null,
+        "default": 0
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "invoice",
+        "kind": "file",
+        "label": "Invoice",
+        "path_pattern": "{output_dir}/invoice_*.html"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

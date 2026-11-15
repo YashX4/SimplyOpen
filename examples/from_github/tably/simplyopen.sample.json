@@ -1,0 +1,9 @@
+{
+  "values": {
+    "files": [
+      "examples/example1.csv"
+    ],
+    "caption": "Results",
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "name": "XAPK to APK",
+  "description": "Repack an Android .xapk bundle as a single .apk file.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "xapktoapk.py",
+          "working_directory": "",
+          "run_command": "python xapktoapk.py {args}",
+          "description": "Converts one .xapk file.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "xapk",
+        "kind": "file",
+        "label": "XAPK file",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".xapk"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Progress; the APK is saved in the project folder",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [
+        "apktool",
+        "zipalign",
+        "apksigner",
+        "java"
+      ],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": true
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "Needs the Android build tools and apktool installed on the computer.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

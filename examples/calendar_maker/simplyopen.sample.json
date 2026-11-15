@@ -1,0 +1,8 @@
+{
+  "values": {
+    "year": "2027",
+    "month": "2",
+    "week_starts": "Sunday",
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "values": {
+    "file": "sample/film.srt",
+    "seconds": "2.5",
+    "output_dir": "{temp}"
+  }
+}

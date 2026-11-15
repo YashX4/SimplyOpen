@@ -1,0 +1,119 @@
+{
+  "name": "Group Maker",
+  "description": "Split a list of names into fair random groups for class projects, teams or seating.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "groups",
+          "path": "groups.py",
+          "working_directory": "",
+          "run_command": "python groups.py {args}",
+          "description": "Splits a list of names into groups.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "groups",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "List of names (one per line)",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".txt"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "group_size",
+        "kind": "number",
+        "label": "People per group",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 1,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--group-size {value}",
+        "env_binding": null,
+        "default": 3
+      },
+      {
+        "id": "seed",
+        "kind": "number",
+        "label": "Shuffle number",
+        "help": "Use the same number again to get the same groups.",
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--seed {value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "groups",
+        "kind": "file",
+        "label": "Groups",
+        "path_pattern": "{output_dir}/groups.txt"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

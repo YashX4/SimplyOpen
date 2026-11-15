@@ -1,0 +1,8 @@
+{
+  "values": {
+    "image": "misc/preview.png",
+    "width": "40",
+    "mode": "a",
+    "output_dir": "{temp}"
+  }
+}

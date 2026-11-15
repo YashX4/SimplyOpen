@@ -1,0 +1,120 @@
+{
+  "name": "Calendar Maker",
+  "description": "Make a printable one-page calendar for any month of any year.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "make_calendar",
+          "path": "make_calendar.py",
+          "working_directory": "",
+          "run_command": "python make_calendar.py {args}",
+          "description": "Makes a calendar page for one month.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "make_calendar",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "year",
+        "kind": "number",
+        "label": "Year",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 1,
+        "max": 9999,
+        "secret": false,
+        "cli_binding": "--year {value}",
+        "env_binding": null
+      },
+      {
+        "id": "month",
+        "kind": "number",
+        "label": "Month (1 to 12)",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 1,
+        "max": 12,
+        "secret": false,
+        "cli_binding": "--month {value}",
+        "env_binding": null
+      },
+      {
+        "id": "week_starts",
+        "kind": "choice",
+        "label": "Week starts on",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "choices": [
+          "Monday",
+          "Sunday"
+        ],
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--week-starts {value}",
+        "env_binding": null,
+        "default": "Monday"
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "calendar",
+        "kind": "file",
+        "label": "Calendar",
+        "path_pattern": "{output_dir}/calendar_*.html"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

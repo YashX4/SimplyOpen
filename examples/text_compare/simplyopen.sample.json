@@ -1,0 +1,7 @@
+{
+  "values": {
+    "old": "sample/draft1.txt",
+    "new": "sample/draft2.txt",
+    "output_dir": "{temp}"
+  }
+}

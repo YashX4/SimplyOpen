@@ -1,0 +1,143 @@
+{
+  "name": "Spreadsheets to Database",
+  "description": "Copy spreadsheet files into one SQLite database, a table per file.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "csv_to_sqlite.py",
+          "working_directory": "",
+          "run_command": "python csv_to_sqlite.py {args}",
+          "description": "Copies CSV files into a SQLite database.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "files",
+        "kind": "file",
+        "label": "Spreadsheets",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": true,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-f {value}",
+        "env_binding": null
+      },
+      {
+        "id": "typing",
+        "kind": "choice",
+        "label": "Guess column types",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "choices": [
+          "full",
+          "quick",
+          "none"
+        ],
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-t {value}",
+        "env_binding": null,
+        "default": "quick"
+      },
+      {
+        "id": "drop_tables",
+        "kind": "boolean",
+        "label": "Replace tables that already exist",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-D",
+        "env_binding": null
+      },
+      {
+        "id": "delimiter",
+        "kind": "text",
+        "label": "Character between columns",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-x {value}",
+        "env_binding": null,
+        "default": ","
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-o {value}/data.db",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Database",
+        "path_pattern": "{output_dir}/data.db"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "click"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "It also reads file names from standard input when that is not a terminal; if the Runner leaves input open it may wait.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

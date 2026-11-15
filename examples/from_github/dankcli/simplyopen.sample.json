@@ -1,0 +1,7 @@
+{
+  "values": {
+    "img": "simplyopen_sample/picture.png",
+    "text": "When the demo works first time",
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "values": {
+    "amount": "12000",
+    "rate": "5.5",
+    "years": "4",
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "name": "Scanned PDF to Text",
+  "description": "Read the words out of a scanned PDF using text recognition on your own computer.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "LocalOCR.py",
+          "working_directory": "",
+          "run_command": "python LocalOCR.py {args}",
+          "description": "Runs text recognition on one PDF.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "pdf",
+        "kind": "file",
+        "label": "Scanned PDF",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".pdf"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "resolution",
+        "kind": "number",
+        "label": "Scan quality (dots per inch)",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 50,
+        "max": 1200,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null,
+        "default": 300
+      },
+      {
+        "id": "language",
+        "kind": "text",
+        "label": "Language code",
+        "help": "A Tesseract code such as eng or ita.",
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null,
+        "default": "ita"
+      },
+      {
+        "id": "image_format",
+        "kind": "choice",
+        "label": "Working picture type",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "choices": [
+          "png",
+          "jpeg"
+        ],
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null,
+        "default": "png"
+      },
+      {
+        "id": "orientation",
+        "kind": "text",
+        "label": "Detect page rotation (True or False)",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null,
+        "default": "True"
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}/output.txt",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Text",
+        "path_pattern": "{output_dir}/output.txt"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "pyocr>=0.4.7",
+        "Wand>=0.4.4",
+        "tesserocr>=2.1.3"
+      ],
+      "system": [
+        "tesseract",
+        "imagemagick"
+      ],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "Every option is given by position, so all of them must be filled in for the output file to land in the right place.",
+        "Needs Tesseract and ImageMagick installed on the computer.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

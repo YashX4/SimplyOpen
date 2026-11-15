@@ -1,0 +1,105 @@
+{
+  "name": "Timesheet Totals",
+  "description": "Add up the hours each person worked from start and finish times, with pay if you like.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "timesheet",
+          "path": "timesheet.py",
+          "working_directory": "",
+          "run_command": "python timesheet.py {args}",
+          "description": "Totals the hours in one timesheet.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "timesheet",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "Timesheet",
+        "help": "Needs the columns name, date, start and end.",
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "hourly_rate",
+        "kind": "number",
+        "label": "Pay per hour",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 0,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--hourly-rate {value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "hours",
+        "kind": "file",
+        "label": "Hours worked",
+        "path_pattern": "{output_dir}/hours.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}
