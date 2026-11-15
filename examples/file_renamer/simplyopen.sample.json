@@ -1,0 +1,8 @@
+{
+  "values": {
+    "folder": "sample/photos",
+    "prefix": "holiday",
+    "start": "1",
+    "output_dir": "{temp}"
+  }
+}

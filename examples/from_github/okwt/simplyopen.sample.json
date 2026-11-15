@@ -1,0 +1,7 @@
+{
+  "values": {
+    "infile": "simplyopen_sample/picture.png",
+    "normalize": true,
+    "output_dir": "{temp}"
+  }
+}

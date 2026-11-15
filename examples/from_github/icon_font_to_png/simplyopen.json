@@ -1,0 +1,143 @@
+{
+  "name": "Icon Font to Pictures",
+  "description": "Save icons from an icon font such as Font Awesome as PNG pictures.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "icon_font_to_png/command_line.py",
+          "working_directory": "",
+          "run_command": "icon-font-to-png {args}",
+          "description": "Exports icons from a font as PNG files.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "css",
+        "kind": "file",
+        "label": "The font's CSS file",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".css"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--css {value}",
+        "env_binding": null
+      },
+      {
+        "id": "ttf",
+        "kind": "file",
+        "label": "The font file",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".ttf"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--ttf {value}",
+        "env_binding": null
+      },
+      {
+        "id": "size",
+        "kind": "number",
+        "label": "Size in pixels",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 1,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--size {value}",
+        "env_binding": null
+      },
+      {
+        "id": "color",
+        "kind": "text",
+        "label": "Colour",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--color {value}",
+        "env_binding": null
+      },
+      {
+        "id": "icons",
+        "kind": "text",
+        "label": "Icon names (or ALL)",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Progress; pictures are saved in an exported folder",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "Pillow>=4.0.0",
+        "requests>=2.13.0",
+        "six>=1.10.0",
+        "tinycss>=0.4"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "Started through its installed command, not `python`.",
+        "Several icon names typed in one box are passed as one value, so only one name or ALL works.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

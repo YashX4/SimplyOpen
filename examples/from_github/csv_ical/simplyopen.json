@@ -1,0 +1,68 @@
+{
+  "name": "Spreadsheet to Calendar",
+  "description": "Turn a spreadsheet of events into a calendar file (.ics). A library with an example script.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "examples/to_ical.py",
+          "working_directory": "",
+          "run_command": "python examples/to_ical.py",
+          "description": "Converts the bundled example spreadsheet to a calendar file.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Calendar file",
+        "path_pattern": "examples/example.ics"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "icalendar>=6.0.0,<7.0.0"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "This is a library; its only runnable script has the file names written into the code.",
+        "The script imports csv_ical, which is only found once the project itself is installed (pip install .).",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

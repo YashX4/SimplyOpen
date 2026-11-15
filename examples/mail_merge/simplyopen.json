@@ -1,0 +1,108 @@
+{
+  "name": "Letter Maker",
+  "description": "Write one personal letter per person from a single letter and a list of people.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "merge",
+          "path": "merge.py",
+          "working_directory": "",
+          "run_command": "python merge.py {args}",
+          "description": "Fills in a letter once per person.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "merge",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "template",
+        "kind": "file",
+        "label": "The letter",
+        "help": "Write blanks like {name}; each must match a column in the list.",
+        "required": true,
+        "accepts": [
+          ".txt"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--template {value}",
+        "env_binding": null
+      },
+      {
+        "id": "people",
+        "kind": "file",
+        "label": "List of people",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--people {value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "letters",
+        "kind": "folder",
+        "label": "Letters",
+        "path_pattern": "{output_dir}"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

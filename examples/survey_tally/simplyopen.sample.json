@@ -1,0 +1,7 @@
+{
+  "values": {
+    "file": "sample/lunch_survey.csv",
+    "skip_first_column": true,
+    "output_dir": "{temp}"
+  }
+}

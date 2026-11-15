@@ -1,0 +1,106 @@
+{
+  "name": "Grade Calculator",
+  "description": "Work out each student's average and letter grade from a sheet of scores.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "grades",
+          "path": "grades.py",
+          "working_directory": "",
+          "run_command": "python grades.py {args}",
+          "description": "Adds averages and grades to a sheet of scores.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "grades",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "Sheet of scores",
+        "help": "First column is the name; the others are scores out of 100.",
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "pass_mark",
+        "kind": "number",
+        "label": "Lowest passing average",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 0,
+        "max": 100,
+        "secret": false,
+        "cli_binding": "--pass-mark {value}",
+        "env_binding": null,
+        "default": 60
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "grades",
+        "kind": "file",
+        "label": "Grades",
+        "path_pattern": "{output_dir}/grades.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

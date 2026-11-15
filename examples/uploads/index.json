@@ -1,0 +1,551 @@
+[
+  {
+    "id": "bar_chart_maker",
+    "name": "Bar Chart Maker",
+    "description": "Draw a bar chart picture from a two-column list of names and numbers.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/bar_chart_maker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/bar_chart_maker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/bar_chart_maker/simplyopen.sample.json"
+  },
+  {
+    "id": "bingo_card_maker",
+    "name": "Bingo Card Maker",
+    "description": "Make printable bingo cards from your own list of words. Every card is shuffled differently.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/bingo_card_maker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/bingo_card_maker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/bingo_card_maker/simplyopen.sample.json"
+  },
+  {
+    "id": "calendar_maker",
+    "name": "Calendar Maker",
+    "description": "Make a printable one-page calendar for any month of any year.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/calendar_maker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/calendar_maker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/calendar_maker/simplyopen.sample.json"
+  },
+  {
+    "id": "color_palette",
+    "name": "Colour Palette Maker",
+    "description": "Build a matching set of lighter and darker shades from one colour.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/color_palette.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/color_palette/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/color_palette/simplyopen.sample.json"
+  },
+  {
+    "id": "csv_cleaner",
+    "name": "Spreadsheet Cleaner",
+    "description": "Tidy a messy spreadsheet file: trims stray spaces and removes empty and repeated rows.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/csv_cleaner.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/csv_cleaner/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/csv_cleaner/simplyopen.sample.json"
+  },
+  {
+    "id": "csv_merger",
+    "name": "Spreadsheet Joiner",
+    "description": "Join several spreadsheet files into one, even when their columns differ.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/csv_merger.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/csv_merger/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/csv_merger/simplyopen.sample.json"
+  },
+  {
+    "id": "csv_to_json",
+    "name": "Spreadsheet to JSON",
+    "description": "Turn a spreadsheet file into a JSON file, the format many websites and apps ask for.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/csv_to_json.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/csv_to_json/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/csv_to_json/simplyopen.sample.json"
+  },
+  {
+    "id": "duplicate_finder",
+    "name": "Duplicate File Finder",
+    "description": "Find files in a folder that are exact copies of each other, so you can free up space.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/duplicate_finder.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/duplicate_finder/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/duplicate_finder/simplyopen.sample.json"
+  },
+  {
+    "id": "email_extractor",
+    "name": "Email Address Finder",
+    "description": "Pull every email address out of a document and list each one once.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/email_extractor.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/email_extractor/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/email_extractor/simplyopen.sample.json"
+  },
+  {
+    "id": "expense_summary",
+    "name": "Expense Summary",
+    "description": "Add up a list of expenses by category and by month to see where the money went.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/expense_summary.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/expense_summary/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/expense_summary/simplyopen.sample.json"
+  },
+  {
+    "id": "file_renamer",
+    "name": "Batch File Renamer",
+    "description": "Make neatly numbered copies of every file in a folder, like holiday_001, holiday_002.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/file_renamer.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/file_renamer/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/file_renamer/simplyopen.sample.json"
+  },
+  {
+    "id": "find_replace",
+    "name": "Find and Replace",
+    "description": "Swap one word or phrase for another everywhere in a text file.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/find_replace.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/find_replace/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/find_replace/simplyopen.sample.json"
+  },
+  {
+    "id": "flashcard_maker",
+    "name": "Flashcard Maker",
+    "description": "Turn a list of questions and answers into study cards you can click to flip, or print.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/flashcard_maker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/flashcard_maker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/flashcard_maker/simplyopen.sample.json"
+  },
+  {
+    "id": "folder_organizer",
+    "name": "Folder Organizer",
+    "description": "Sort a messy folder into tidy folders by type: Pictures, Documents, Music and so on.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/folder_organizer.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/folder_organizer/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/folder_organizer/simplyopen.sample.json"
+  },
+  {
+    "id": "grade_calculator",
+    "name": "Grade Calculator",
+    "description": "Work out each student's average and letter grade from a sheet of scores.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/grade_calculator.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/grade_calculator/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/grade_calculator/simplyopen.sample.json"
+  },
+  {
+    "id": "group_maker",
+    "name": "Group Maker",
+    "description": "Split a list of names into fair random groups for class projects, teams or seating.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/group_maker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/group_maker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/group_maker/simplyopen.sample.json"
+  },
+  {
+    "id": "image_resizer",
+    "name": "Image Resizer",
+    "description": "Make a picture smaller or larger without stretching it.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/image_resizer.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/image_resizer/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/image_resizer/simplyopen.sample.json"
+  },
+  {
+    "id": "invoice_maker",
+    "name": "Invoice Maker",
+    "description": "Turn a list of items and prices into a printable invoice with the totals worked out.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/invoice_maker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/invoice_maker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/invoice_maker/simplyopen.sample.json"
+  },
+  {
+    "id": "loan_calculator",
+    "name": "Loan Calculator",
+    "description": "Work out the monthly payment on a loan and see every payment until it is paid off.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/loan_calculator.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/loan_calculator/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/loan_calculator/simplyopen.sample.json"
+  },
+  {
+    "id": "log_summarizer",
+    "name": "Log Summarizer",
+    "description": "Read a long program log and see how many errors and warnings it has and which come up most.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/log_summarizer.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/log_summarizer/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/log_summarizer/simplyopen.sample.json"
+  },
+  {
+    "id": "mail_merge",
+    "name": "Letter Maker",
+    "description": "Write one personal letter per person from a single letter and a list of people.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/mail_merge.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/mail_merge/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/mail_merge/simplyopen.sample.json"
+  },
+  {
+    "id": "markdown_to_html",
+    "name": "Notes to Web Page",
+    "description": "Turn simple formatted notes (Markdown) into a web page you can open, share or print.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/markdown_to_html.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/markdown_to_html/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/markdown_to_html/simplyopen.sample.json"
+  },
+  {
+    "id": "maze_maker",
+    "name": "Maze Maker",
+    "description": "Draw a random maze to print and solve with a pencil. Pick how big it is.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/maze_maker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/maze_maker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/maze_maker/simplyopen.sample.json"
+  },
+  {
+    "id": "password_generator",
+    "name": "Password Generator",
+    "description": "Make a list of strong random passwords, saved to a file on your own computer.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/password_generator.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/password_generator/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/password_generator/simplyopen.sample.json"
+  },
+  {
+    "id": "readability_checker",
+    "name": "Readability Checker",
+    "description": "Score how easy a piece of writing is to read and find the sentences worth splitting.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/readability_checker.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/readability_checker/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/readability_checker/simplyopen.sample.json"
+  },
+  {
+    "id": "recipe_scaler",
+    "name": "Recipe Scaler",
+    "description": "Make a recipe bigger or smaller: every amount is multiplied for you.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/recipe_scaler.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/recipe_scaler/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/recipe_scaler/simplyopen.sample.json"
+  },
+  {
+    "id": "subtitle_shifter",
+    "name": "Subtitle Shifter",
+    "description": "Move every subtitle earlier or later when the words do not line up with the video.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/subtitle_shifter.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/subtitle_shifter/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/subtitle_shifter/simplyopen.sample.json"
+  },
+  {
+    "id": "survey_tally",
+    "name": "Survey Tally",
+    "description": "Count the answers to each question in a survey and see them as simple bars.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/survey_tally.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/survey_tally/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/survey_tally/simplyopen.sample.json"
+  },
+  {
+    "id": "text_compare",
+    "name": "Document Compare",
+    "description": "See what changed between two versions of a document, side by side.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/text_compare.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/text_compare/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/text_compare/simplyopen.sample.json"
+  },
+  {
+    "id": "timesheet_totals",
+    "name": "Timesheet Totals",
+    "description": "Add up the hours each person worked from start and finish times, with pay if you like.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/timesheet_totals.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/timesheet_totals/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/timesheet_totals/simplyopen.sample.json"
+  },
+  {
+    "id": "word_counter",
+    "name": "Word Counter",
+    "description": "Count how often each word appears in a piece of writing.",
+    "source": "simplyopen",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/word_counter.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/word_counter/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/word_counter/simplyopen.sample.json"
+  },
+  {
+    "id": "csv2md",
+    "name": "Spreadsheet to Markdown Table",
+    "description": "Turn spreadsheet files into Markdown tables you can paste into notes or a README.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/csv2md.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/csv2md/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/csv2md/simplyopen.sample.json"
+  },
+  {
+    "id": "csv_ical",
+    "name": "Spreadsheet to Calendar",
+    "description": "Turn a spreadsheet of events into a calendar file (.ics). A library with an example script.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/csv_ical.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/csv_ical/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "csv_to_sqlite",
+    "name": "Spreadsheets to Database",
+    "description": "Copy spreadsheet files into one SQLite database, a table per file.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/csv_to_sqlite.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/csv_to_sqlite/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/csv_to_sqlite/simplyopen.sample.json"
+  },
+  {
+    "id": "csv_trimming",
+    "name": "Messy Spreadsheet Trimmer",
+    "description": "Clean a badly exported spreadsheet: removes padding, repeated headings and empty edges.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/csv_trimming.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/csv_trimming/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/csv_trimming/simplyopen.sample.json"
+  },
+  {
+    "id": "dankcli",
+    "name": "Meme Caption Maker",
+    "description": "Add a caption on a white strip above a picture, meme style.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/dankcli.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/dankcli/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/dankcli/simplyopen.sample.json"
+  },
+  {
+    "id": "dhash",
+    "name": "Picture Fingerprint",
+    "description": "Give a picture a short fingerprint, or compare two pictures to see how alike they are.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/dhash.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/dhash/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/dhash/simplyopen.sample.json"
+  },
+  {
+    "id": "faker_cli",
+    "name": "Fake Data Maker",
+    "description": "Make rows of realistic fake data (names, emails, dates) for testing.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/faker_cli.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/faker_cli/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/faker_cli/simplyopen.sample.json"
+  },
+  {
+    "id": "gjf",
+    "name": "GeoJSON Fixer",
+    "description": "Check map files (GeoJSON) for invalid shapes and repair them.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/gjf.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/gjf/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/gjf/simplyopen.sample.json"
+  },
+  {
+    "id": "gpx_converter",
+    "name": "GPS Track to Spreadsheet",
+    "description": "Turn a GPS track (.gpx) from a watch or phone into a spreadsheet.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/gpx_converter.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/gpx_converter/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/gpx_converter/simplyopen.sample.json"
+  },
+  {
+    "id": "icon_font_to_png",
+    "name": "Icon Font to Pictures",
+    "description": "Save icons from an icon font such as Font Awesome as PNG pictures.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/icon_font_to_png.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/icon_font_to_png/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "img2text",
+    "name": "Picture to Character Art",
+    "description": "Turn a picture into character art in three styles: letters, braille dots or colour blocks.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/img2text.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/img2text/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/img2text/simplyopen.sample.json"
+  },
+  {
+    "id": "json_to_csv",
+    "name": "JSON to Spreadsheet",
+    "description": "Flatten a nested JSON file into a spreadsheet, one row per record.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/json_to_csv.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/json_to_csv/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/json_to_csv/simplyopen.sample.json"
+  },
+  {
+    "id": "jtbl",
+    "name": "JSON to Table",
+    "description": "Show JSON data as a readable table.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/jtbl.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/jtbl/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "line_counter",
+    "name": "Line Counter",
+    "description": "Count the files and lines in a folder of code.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/line_counter.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/line_counter/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/line_counter/simplyopen.sample.json"
+  },
+  {
+    "id": "markdown_articles_tool",
+    "name": "Article Image Saver",
+    "description": "Download every picture an article links to and point the article at the saved copies.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/markdown_articles_tool.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/markdown_articles_tool/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/markdown_articles_tool/simplyopen.sample.json"
+  },
+  {
+    "id": "mysqldump_to_csv",
+    "name": "Database Dump to Spreadsheet",
+    "description": "Turn a MySQL dump file into spreadsheet rows.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/mysqldump_to_csv.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/mysqldump_to_csv/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/mysqldump_to_csv/simplyopen.sample.json"
+  },
+  {
+    "id": "ocr2text",
+    "name": "PDF Text Recognition",
+    "description": "Convert scanned PDFs to plain text files using text recognition.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/ocr2text.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/ocr2text/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "okwt",
+    "name": "Wavetable Maker",
+    "description": "Make a synthesizer wavetable from a sound file or even a picture.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/okwt.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/okwt/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/okwt/simplyopen.sample.json"
+  },
+  {
+    "id": "pdf2word",
+    "name": "PDF to Word",
+    "description": "Convert every PDF in a folder to a Word document.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/pdf2word.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/pdf2word/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "pdf_statement_reader",
+    "name": "Bank Statement Reader",
+    "description": "Pull the transactions out of a PDF bank statement into a spreadsheet.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/pdf_statement_reader.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/pdf_statement_reader/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "pdf_to_txt",
+    "name": "Scanned PDF to Text",
+    "description": "Read the words out of a scanned PDF using text recognition on your own computer.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/pdf_to_txt.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/pdf_to_txt/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "picture2pixel",
+    "name": "Picture to Pixel Array",
+    "description": "Shrink a picture to a small pixel grid for showing on an FPGA display.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/picture2pixel.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/picture2pixel/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/picture2pixel/simplyopen.sample.json"
+  },
+  {
+    "id": "py_midicsv",
+    "name": "MIDI to Spreadsheet",
+    "description": "Turn a MIDI music file into a readable spreadsheet of notes, and back.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/py_midicsv.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/py_midicsv/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/py_midicsv/simplyopen.sample.json"
+  },
+  {
+    "id": "python2jupyter",
+    "name": "Script to Notebook",
+    "description": "Turn a Python script into a Jupyter notebook, using its comments as the text cells.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/python2jupyter.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/python2jupyter/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/python2jupyter/simplyopen.sample.json"
+  },
+  {
+    "id": "tably",
+    "name": "Spreadsheet to LaTeX Table",
+    "description": "Turn spreadsheet files into LaTeX tables for a paper or report.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/tably.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/tably/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/tably/simplyopen.sample.json"
+  },
+  {
+    "id": "to_ascii",
+    "name": "Picture to ASCII Art",
+    "description": "Show a picture or video as text characters.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/to_ascii.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/to_ascii/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "tq",
+    "name": "Web Page Picker",
+    "description": "Pick pieces out of a web page's HTML using a CSS selector.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/tq.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/tq/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "video_to_audio",
+    "name": "Video to MP3",
+    "description": "Pull the sound out of a video and save it as an MP3.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/video_to_audio.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/video_to_audio/simplyopen.json",
+    "sample_url": null
+  },
+  {
+    "id": "word_frequency_analyzer",
+    "name": "Word Frequency Analyzer",
+    "description": "Find the ten most used words in English or Roman Urdu text.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/word_frequency_analyzer.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/word_frequency_analyzer/simplyopen.json",
+    "sample_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/word_frequency_analyzer/simplyopen.sample.json"
+  },
+  {
+    "id": "xapk_to_apk",
+    "name": "XAPK to APK",
+    "description": "Repack an Android .xapk bundle as a single .apk file.",
+    "source": "github",
+    "project_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/uploads/xapk_to_apk.zip",
+    "app_url": "https://raw.githubusercontent.com/akondreddy/SimplyOpen/main/examples/from_github/xapk_to_apk/simplyopen.json",
+    "sample_url": null
+  }
+]

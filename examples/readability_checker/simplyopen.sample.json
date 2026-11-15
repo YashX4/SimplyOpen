@@ -1,0 +1,6 @@
+{
+  "values": {
+    "file": "sample/notice.txt",
+    "output_dir": "{temp}"
+  }
+}

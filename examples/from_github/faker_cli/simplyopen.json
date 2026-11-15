@@ -1,0 +1,115 @@
+{
+  "name": "Fake Data Maker",
+  "description": "Make rows of realistic fake data (names, emails, dates) for testing.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "faker_cli/cli.py",
+          "working_directory": "",
+          "run_command": "fake {args}",
+          "description": "Prints rows of fake data.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "column_types",
+        "kind": "text",
+        "label": "Kinds of data, separated by commas",
+        "help": "Faker names such as name,email,city.",
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "num_rows",
+        "kind": "number",
+        "label": "Number of rows",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 1,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-n {value}",
+        "env_binding": null,
+        "default": 1
+      },
+      {
+        "id": "format",
+        "kind": "choice",
+        "label": "Format",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "choices": [
+          "csv",
+          "json"
+        ],
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-f {value}",
+        "env_binding": null,
+        "default": "csv"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Fake data",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.10"
+      ],
+      "packages": [
+        "faker",
+        "click"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "Started through its installed command `fake`, not `python`; the project must be installed first.",
+        "The short flag for the format was not confirmed by a run.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

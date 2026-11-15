@@ -25,14 +25,15 @@ The manifest is the contract between the parts. Its format is defined once, in [
 | Part | Folder | Status |
 |---|---|---|
 | Analyzer | [analyzer/](analyzer/) | Working. See [its README](analyzer/README.md). |
-| Runner | [runner/](runner/) | Working for Python programs that take their inputs up front, do their job, and finish. |
+| Runner | [runner/](runner/) | Working for Python programs that take their inputs up front, do their job, and finish, and for web pages and React components (Claude artifacts), which it shows in the app's window. |
 | Factory | [.github/workflows/build.yml](.github/workflows/build.yml) | Builds and tests apps for Mac (Apple Silicon), Windows and Linux. |
 | Chat | [chat/](chat/) | Working as its own service. See [its README](chat/README.md). |
-| Website | not in this repository yet | Designed; not yet connected to the parts above. |
+| Website | [web/](web/) | Working, and live at [www.simplyopen.us](https://www.simplyopen.us). Upload a project, watch it build, download the apps. See [its README](web/README.md) and [DEPLOY.md](DEPLOY.md). |
 
 Not supported yet:
 
-- Projects in languages other than Python.
+- Projects in languages other than Python, apart from web pages and React components.
+- React components that use Claude's built-in interface pieces (imports starting with `@/components/`), or that are spread over more than one file.
 - Games, programs with their own window, web servers, and programs that ask questions while they run. The Analyzer can describe these, and the Runner tells the user plainly that it can't open them yet.
 - Signed apps. Mac and Windows show an "unidentified developer" warning the first time a downloaded app is opened.
 
@@ -109,8 +110,11 @@ runner/                     The desktop app (Electron, React, TypeScript)
   src/main/                 Reads the manifest, runs the project, the hidden test mode
   src/renderer/             The window the user sees
   scripts/                  The Factory's steps: fetch-project, stage, smoke-test
-examples/image_resizer/     A sample project, its manifest, and sample inputs
+web/                        The website: its server (src/) and its pages (client/)
+examples/                   Sixty sample projects, each with its manifest and sample inputs
+  uploads/                  The same projects as zips, ready to upload on the website
 .github/workflows/          The Factory
+dev.sh                      Starts the analyzer, chat and website together on your computer
 ```
 
 ## A project's two files

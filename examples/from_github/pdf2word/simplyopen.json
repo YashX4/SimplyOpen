@@ -1,0 +1,76 @@
+{
+  "name": "PDF to Word",
+  "description": "Convert every PDF in a folder to a Word document.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "main.py",
+          "working_directory": "",
+          "run_command": "python main.py",
+          "description": "Converts the PDFs in the pdf folder to Word files in the word folder.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "folder",
+        "label": "Word documents",
+        "path_pattern": "word"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "pdf2docx==0.5.2",
+        "PyMuPDF==1.19.3",
+        "python-docx==0.8.11",
+        "opencv-python==4.5.4.60",
+        "numpy==1.21.4",
+        "fonttools==4.28.3",
+        "lxml==4.7.1",
+        "fire==0.4.0",
+        "termcolor==1.1.0",
+        "six==1.16.0"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "It takes no options: it reads folder names from config.cfg and expects folders named pdf and word next to the script, which are not in the repository.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

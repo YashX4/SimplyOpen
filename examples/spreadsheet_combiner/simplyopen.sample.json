@@ -1,0 +1,8 @@
+{
+  "values": {
+    "files": ["sample/january.csv", "sample/february.csv"],
+    "output_dir": "{temp}",
+    "remove_duplicates": true,
+    "sort_by": "name"
+  }
+}

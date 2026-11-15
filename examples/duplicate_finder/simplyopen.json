@@ -1,0 +1,89 @@
+{
+  "name": "Duplicate File Finder",
+  "description": "Find files in a folder that are exact copies of each other, so you can free up space.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "find_duplicates",
+          "path": "find_duplicates.py",
+          "working_directory": "",
+          "run_command": "python find_duplicates.py {args}",
+          "description": "Lists identical files in a folder.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "find_duplicates",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "folder",
+        "kind": "folder",
+        "label": "Folder to look through",
+        "help": "Folders inside it are checked too. Nothing is deleted.",
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "report",
+        "kind": "file",
+        "label": "List of duplicates",
+        "path_pattern": "{output_dir}/duplicates_report.txt"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

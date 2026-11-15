@@ -1,0 +1,117 @@
+{
+  "name": "Maze Maker",
+  "description": "Draw a random maze to print and solve with a pencil. Pick how big it is.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "maze",
+          "path": "maze.py",
+          "working_directory": "",
+          "run_command": "python maze.py {args}",
+          "description": "Draws one maze.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "maze",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "width",
+        "kind": "number",
+        "label": "Squares across",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 2,
+        "max": 80,
+        "secret": false,
+        "cli_binding": "--width {value}",
+        "env_binding": null,
+        "default": 20
+      },
+      {
+        "id": "height",
+        "kind": "number",
+        "label": "Squares down",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 2,
+        "max": 80,
+        "secret": false,
+        "cli_binding": "--height {value}",
+        "env_binding": null,
+        "default": 14
+      },
+      {
+        "id": "seed",
+        "kind": "number",
+        "label": "Maze number",
+        "help": "Use the same number again to get the same maze.",
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--seed {value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "maze",
+        "kind": "file",
+        "label": "Maze picture",
+        "path_pattern": "{output_dir}/maze.svg"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

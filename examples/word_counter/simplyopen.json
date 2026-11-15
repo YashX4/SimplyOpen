@@ -1,0 +1,120 @@
+{
+  "name": "Word Counter",
+  "description": "Count how often each word appears in a piece of writing.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "count",
+          "path": "count.py",
+          "working_directory": "",
+          "run_command": "python count.py {args}",
+          "description": "Counts the words in one text file.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "count",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "Text to read",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".txt",
+          ".md"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "top",
+        "kind": "number",
+        "label": "How many words to list",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 1,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--top {value}",
+        "env_binding": null,
+        "default": 20
+      },
+      {
+        "id": "ignore_common",
+        "kind": "boolean",
+        "label": "Skip common words like 'the' and 'and'",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--ignore-common",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "counts",
+        "kind": "file",
+        "label": "Word counts",
+        "path_pattern": "{output_dir}/word_counts.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

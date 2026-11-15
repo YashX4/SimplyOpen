@@ -1,0 +1,6 @@
+{
+  "values": {
+    "file": "tests/documents/noisy/padding.csv",
+    "output_dir": "{temp}"
+  }
+}

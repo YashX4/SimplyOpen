@@ -40,6 +40,24 @@ function pieces(template: string): string[] {
   return template.trim().split(/\s+/).filter(Boolean)
 }
 
+/** Where the Factory puts the web page it builds from a React component. */
+export const BUILT_PAGE = 'simplyopen-page/index.html'
+
+/**
+ * Some projects are not programs to run but pages to show: a web page, or a
+ * React component (which is what most Claude artifacts are). For those, this
+ * is the page's file inside the project folder; for everything else, null.
+ *
+ * A web page is shown as it is. A React component cannot be shown directly,
+ * so the Factory builds it into a page first and the Runner shows that.
+ */
+export function pagePath(manifest: Manifest): string | null {
+  const path = primaryEntryPoint(manifest)?.path ?? ''
+  if (/\.html?$/i.test(path)) return path
+  if (/\.(jsx|tsx)$/i.test(path)) return BUILT_PAGE
+  return null
+}
+
 /**
  * The manifest format can describe far more than the Runner can run so far.
  * Returns a plain-English reason if this project is outside what's supported,
@@ -49,6 +67,8 @@ export function unsupportedReason(manifest: Manifest): string | null {
   if (manifest.schema_version !== '1.0') {
     return 'This app was made for a different version of SimplyOpen.'
   }
+  // A page needs no language, command or form: the window just shows it.
+  if (pagePath(manifest) !== null) return null
   if (manifest.project.language !== 'python') {
     return 'Only Python projects can be opened so far.'
   }

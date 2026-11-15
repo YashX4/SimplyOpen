@@ -1,0 +1,6 @@
+{
+  "values": {
+    "midi": "tests/sample.mid",
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "values": {
+    "file": "sample/contacts.csv",
+    "output_dir": "{temp}"
+  }
+}

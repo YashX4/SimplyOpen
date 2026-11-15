@@ -1,0 +1,138 @@
+{
+  "name": "Messy Spreadsheet Trimmer",
+  "description": "Clean a badly exported spreadsheet: removes padding, repeated headings and empty edges.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "csv_trimming/cli.py",
+          "working_directory": "",
+          "run_command": "python -m csv_trimming.cli {args}",
+          "description": "Cleans one CSV file.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "Messy spreadsheet",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}/cleaned.csv",
+        "env_binding": null
+      },
+      {
+        "id": "no_restore_header",
+        "kind": "boolean",
+        "label": "Do not try to restore the heading",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--no-restore-header",
+        "env_binding": null
+      },
+      {
+        "id": "keep_padding",
+        "kind": "boolean",
+        "label": "Keep padding",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--keep-padding",
+        "env_binding": null
+      },
+      {
+        "id": "keep_duplicated_schema",
+        "kind": "boolean",
+        "label": "Keep repeated headings",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--keep-duplicated-schema",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Cleaned spreadsheet",
+        "path_pattern": "{output_dir}/cleaned.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "pandas>=2.1.0",
+        "scipy",
+        "numpy",
+        "ugly_csv_generator>=1.1.4"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

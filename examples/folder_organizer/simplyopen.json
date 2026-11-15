@@ -1,0 +1,89 @@
+{
+  "name": "Folder Organizer",
+  "description": "Sort a messy folder into tidy folders by type: Pictures, Documents, Music and so on.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "organize",
+          "path": "organize.py",
+          "working_directory": "",
+          "run_command": "python organize.py {args}",
+          "description": "Copies a folder's files into folders by type.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "organize",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "folder",
+        "kind": "folder",
+        "label": "Messy folder",
+        "help": "The originals are not changed.",
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "sorted",
+        "kind": "folder",
+        "label": "Sorted folders",
+        "path_pattern": "{output_dir}"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

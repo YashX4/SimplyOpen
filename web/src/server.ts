@@ -55,7 +55,9 @@ async function main(): Promise<void> {
 
   const factory: Factory =
     env.GITHUB_TOKEN && env.GITHUB_OWNER && env.GITHUB_REPO
-      ? new GithubFactory(env.GITHUB_OWNER, env.GITHUB_REPO, env.GITHUB_TOKEN)
+      ? // FACTORY_REF picks the branch whose Runner and build steps are used.
+        // Leave it unset for main; set it to try a branch's Factory changes.
+        new GithubFactory(env.GITHUB_OWNER, env.GITHUB_REPO, env.GITHUB_TOKEN, 'build.yml', env.FACTORY_REF || 'main')
       : new NoFactory()
 
   const app = await buildApp({

@@ -1,0 +1,117 @@
+{
+  "name": "Batch File Renamer",
+  "description": "Make neatly numbered copies of every file in a folder, like holiday_001, holiday_002.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "rename",
+          "path": "rename.py",
+          "working_directory": "",
+          "run_command": "python rename.py {args}",
+          "description": "Copies a folder's files under numbered names.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "rename",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "folder",
+        "kind": "folder",
+        "label": "Folder with the files",
+        "help": "The originals are not changed.",
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "prefix",
+        "kind": "text",
+        "label": "Name every copy starts with",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--prefix {value}",
+        "env_binding": null,
+        "default": "file"
+      },
+      {
+        "id": "start",
+        "kind": "number",
+        "label": "First number",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 0,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--start {value}",
+        "env_binding": null,
+        "default": 1
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "renamed",
+        "kind": "folder",
+        "label": "Renamed copies",
+        "path_pattern": "{output_dir}"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

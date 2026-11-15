@@ -1,0 +1,140 @@
+{
+  "name": "Picture to Pixel Array",
+  "description": "Shrink a picture to a small pixel grid for showing on an FPGA display.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "picture2pixel/convert2pixel.py",
+          "working_directory": "",
+          "run_command": "python -m picture2pixel.convert2pixel {args}",
+          "description": "Converts one picture to a .p2p pixel file.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "image",
+        "kind": "file",
+        "label": "Picture",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".png",
+          ".jpg",
+          ".jpeg"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "width",
+        "kind": "number",
+        "label": "Width in pixels",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 1,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "height",
+        "kind": "number",
+        "label": "Height in pixels",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 1,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "svd_r",
+        "kind": "number",
+        "label": "Detail kept (SVD rank)",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": 0,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "folder",
+        "label": "Pixel file",
+        "path_pattern": "{output_dir}"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "numpy",
+        "matplotlib",
+        "imageio",
+        "Pillow"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

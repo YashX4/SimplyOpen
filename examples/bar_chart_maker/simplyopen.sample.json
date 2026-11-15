@@ -1,0 +1,8 @@
+{
+  "values": {
+    "file": "sample/visitors.csv",
+    "title": "Visitors this week",
+    "color": "green",
+    "output_dir": "{temp}"
+  }
+}

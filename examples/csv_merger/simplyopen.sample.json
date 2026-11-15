@@ -1,0 +1,10 @@
+{
+  "values": {
+    "files": [
+      "sample/january.csv",
+      "sample/february.csv"
+    ],
+    "add_source": true,
+    "output_dir": "{temp}"
+  }
+}

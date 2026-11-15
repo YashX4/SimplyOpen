@@ -1,0 +1,152 @@
+{
+  "name": "Bingo Card Maker",
+  "description": "Make printable bingo cards from your own list of words. Every card is shuffled differently.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "bingo",
+          "path": "bingo.py",
+          "working_directory": "",
+          "run_command": "python bingo.py {args}",
+          "description": "Makes a page of bingo cards.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "bingo",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "words",
+        "kind": "file",
+        "label": "Word list (one per line)",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".txt"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "cards",
+        "kind": "number",
+        "label": "Number of cards",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 1,
+        "max": 200,
+        "secret": false,
+        "cli_binding": "--cards {value}",
+        "env_binding": null,
+        "default": 4
+      },
+      {
+        "id": "size",
+        "kind": "choice",
+        "label": "Squares per side",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "choices": [
+          "3",
+          "4",
+          "5"
+        ],
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--size {value}",
+        "env_binding": null,
+        "default": "4"
+      },
+      {
+        "id": "title",
+        "kind": "text",
+        "label": "Title on each card",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--title {value}",
+        "env_binding": null,
+        "default": "Bingo"
+      },
+      {
+        "id": "seed",
+        "kind": "number",
+        "label": "Shuffle number",
+        "help": "Use the same number again to get the same cards.",
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--seed {value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "cards",
+        "kind": "file",
+        "label": "Bingo cards",
+        "path_pattern": "{output_dir}/bingo_cards.html"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "name": "PDF Text Recognition",
+  "description": "Convert scanned PDFs to plain text files using text recognition.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "ocr2text.py",
+          "working_directory": "",
+          "run_command": "python ocr2text.py",
+          "description": "Asks for a source and a destination, then converts the PDFs.",
+          "interface": {
+            "kind": "interactive_terminal",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [
+              {
+                "question": "Source file or folder of PDF(s)",
+                "kind": "text",
+                "choices": []
+              },
+              {
+                "question": "Destination folder for TXT",
+                "kind": "text",
+                "choices": []
+              }
+            ],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Progress; text files are saved in the destination you type",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "Pillow==6.2.0",
+        "pdf2image==1.9.0",
+        "pytesseract==0.2.7"
+      ],
+      "system": [
+        "tesseract",
+        "poppler"
+      ],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "It asks its questions while running, which the Runner does not support yet.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

@@ -17,6 +17,22 @@ import { canEdit, canSee } from '../visibility.js'
 const PLATFORMS = new Set<Platform>(['mac', 'windows', 'linux'])
 const VISIBILITIES = new Set<Visibility>(['private', 'link', 'public'])
 
+/**
+ * The build for one system, with its download address if there is any way to
+ * have one. A system is marked ready the moment its own build passes, but the
+ * address is only known once the whole run has published its files, a little
+ * later. If someone asks in that gap, look again before answering.
+ */
+async function buildWithAddress(deps: AppDeps, versionId: string, platform: Platform) {
+  const build = await versions.buildFor(deps.db, versionId, platform)
+  if (!build || build.status !== 'ready' || build.download_url || build.artifact_id !== null) return build
+  await refresh(
+    { db: deps.db, analyzer: deps.analyzer, storage: deps.storage, factory: deps.factory },
+    versionId,
+  ).catch(() => undefined)
+  return versions.buildFor(deps.db, versionId, platform)
+}
+
 export async function registerProjects(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get<{ Params: { slug: string } }>('/api/projects/:slug', async (request, reply) => {
     const page = await projects.page(deps.db, request.params.slug)
@@ -64,7 +80,7 @@ export async function registerProjects(app: FastifyInstance, deps: AppDeps): Pro
       if (!project || !canSee(project, request.viewer?.id ?? null)) {
         return fail(reply, 404, 'NO_SUCH_VERSION', 'There is no version with that id.')
       }
-      const build = await versions.buildFor(deps.db, version.id, platform)
+      const build = await buildWithAddress(deps, version.id, platform)
       if (!build || build.status !== 'ready') {
         // W5: not for your computer, and why.
         return fail(
@@ -112,7 +128,7 @@ export async function registerProjects(app: FastifyInstance, deps: AppDeps): Pro
       if (!version || !project || !canSee(project, request.viewer?.id ?? null)) {
         return reply.send({ ok: false, reason: 'There is no version with that id.' })
       }
-      const build = await versions.buildFor(deps.db, version.id, platform)
+      const build = await buildWithAddress(deps, version.id, platform)
       if (!build || build.status !== 'ready') {
         return reply.send({ ok: false, reason: build?.message || 'There is no build for that system yet.' })
       }
@@ -120,7 +136,9 @@ export async function registerProjects(app: FastifyInstance, deps: AppDeps): Pro
         // Streamed from the build service, which takes a moment to start.
         return reply.send({ ok: true, slow: true })
       }
-      if (!build.download_url) return reply.send({ ok: false, reason: 'That build is not ready to download yet.' })
+      if (!build.download_url) {
+        return reply.send({ ok: false, reason: 'The app is built and its download is being put in place. Try again in a few seconds.' })
+      }
       try {
         const head = await fetch(build.download_url, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
         if (head.ok) return reply.send({ ok: true, slow: false })
