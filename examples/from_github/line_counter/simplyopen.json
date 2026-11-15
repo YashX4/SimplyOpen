@@ -1,0 +1,79 @@
+{
+  "name": "Line Counter",
+  "description": "Count the files and lines in a folder of code.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "line.py",
+          "working_directory": "",
+          "run_command": "python line.py {args}",
+          "description": "Counts lines under the folder it is started in.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "detail",
+        "kind": "boolean",
+        "label": "Show each file",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-d",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Counts",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "It always counts the folder it is started in (here, its own project folder); there is no way to point it elsewhere.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

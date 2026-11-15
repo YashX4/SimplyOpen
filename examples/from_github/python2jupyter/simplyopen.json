@@ -1,0 +1,107 @@
+{
+  "name": "Script to Notebook",
+  "description": "Turn a Python script into a Jupyter notebook, using its comments as the text cells.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "p2j/main.py",
+          "working_directory": "",
+          "run_command": "python -m p2j.main {args}",
+          "description": "Converts one script to a notebook.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "source",
+        "kind": "file",
+        "label": "Python script",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".py"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-t {value}/notebook.ipynb",
+        "env_binding": null
+      },
+      {
+        "id": "overwrite",
+        "kind": "boolean",
+        "label": "Replace an existing notebook",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-o",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Notebook",
+        "path_pattern": "{output_dir}/notebook.ipynb"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "name": "Spreadsheet to LaTeX Table",
+  "description": "Turn spreadsheet files into LaTeX tables for a paper or report.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "tably.py",
+          "working_directory": "",
+          "run_command": "python tably.py {args}",
+          "description": "Writes a LaTeX table for the given files.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "files",
+        "kind": "file",
+        "label": "Spreadsheets",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": true,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "caption",
+        "kind": "text",
+        "label": "Caption",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-c {value}",
+        "env_binding": null
+      },
+      {
+        "id": "preamble",
+        "kind": "boolean",
+        "label": "Make a whole document, not just the table",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-p",
+        "env_binding": null
+      },
+      {
+        "id": "no_header",
+        "kind": "boolean",
+        "label": "The first row is not a heading",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-n",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-o {value}/table.tex",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "LaTeX table",
+        "path_pattern": "{output_dir}/table.tex"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": [
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

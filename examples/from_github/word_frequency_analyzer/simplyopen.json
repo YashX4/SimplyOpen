@@ -1,0 +1,82 @@
+{
+  "name": "Word Frequency Analyzer",
+  "description": "Find the ten most used words in English or Roman Urdu text.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "analyzer.py",
+          "working_directory": "",
+          "run_command": "python analyzer.py {args}",
+          "description": "Counts the most common words in one file.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "Text file",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".txt"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Top words",
+        "path_pattern": "results.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": [
+        "The result is always saved as results.csv inside the project folder.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

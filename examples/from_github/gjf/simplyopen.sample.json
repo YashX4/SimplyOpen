@@ -1,0 +1,8 @@
+{
+  "values": {
+    "files": [
+      "../simplyopen_sample/square.geojson"
+    ],
+    "validate": true
+  }
+}

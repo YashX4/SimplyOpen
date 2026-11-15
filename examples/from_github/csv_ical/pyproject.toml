@@ -1,0 +1,78 @@
+[project]
+name = "csv-ical"
+authors = [
+    {name = "Albert Wang", email = "git@albertyw.com"},
+]
+description = "Convert between CSV and iCal"
+requires-python = ">=3.5"
+keywords = ["csv", "ical"]
+license = "MIT"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Topic :: Software Development :: Version Control",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "icalendar>=6.0.0,<7.0.0",
+]
+dynamic = ["version", "readme"]
+
+[project.optional-dependencies]
+test = [
+    # Testing
+    "coverage==7.13.2",       # Test coverage
+    "ruff==0.14.14",          # Python linting
+    "syspath==3.0.8",         # Manipulating python paths
+
+    # Types
+    "mypy==1.19.1",           # Static typing
+]
+
+[project.urls]
+"Homepage" = "https://github.com/albertyw/csv-ical"
+"Repository" = "https://github.com/albertyw/csv-ical"
+"Documentation" = "https://github.com/albertyw/csv-ical/blob/master/README.md"
+"Changelog" = "https://github.com/albertyw/csv-ical/blob/master/CHANGELOG.md"
+"Issues" = "https://github.com/albertyw/csv-ical/issues"
+
+[tool.setuptools]
+packages = ["csv_ical"]
+
+[tool.setuptools.dynamic]
+version = {attr = "csv_ical.__version__.__version__"}
+readme = {file = "README.md", content-type="text/markdown"}
+
+[tool.setuptools.package-data]
+csv_ical = ["py.typed"]
+
+[tool.ruff]
+lint.select = ["E", "F", "W", "A", "B", "COM", "N", "PLC", "PLE", "PLW"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = [
+    ".",
+]
+omit = [
+    ".virtualenv",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    'if __name__ == "__main__":',
+]

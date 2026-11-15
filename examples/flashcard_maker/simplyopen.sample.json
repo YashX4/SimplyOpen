@@ -1,0 +1,7 @@
+{
+  "values": {
+    "file": "sample/capitals.csv",
+    "title": "World capitals",
+    "output_dir": "{temp}"
+  }
+}

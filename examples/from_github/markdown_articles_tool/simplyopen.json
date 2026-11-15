@@ -1,0 +1,117 @@
+{
+  "name": "Article Image Saver",
+  "description": "Download every picture an article links to and point the article at the saved copies.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "markdown_tool.py",
+          "working_directory": "",
+          "run_command": "python markdown_tool.py {args}",
+          "description": "Saves an article's pictures and rewrites its links.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "article",
+        "kind": "file",
+        "label": "Article",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".md",
+          ".html"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "skip_incorrect",
+        "kind": "boolean",
+        "label": "Skip pictures that cannot be fetched",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-a",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-O {value}/article.md",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "folder",
+        "label": "Article and pictures",
+        "path_pattern": "{output_dir}"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "pillow==12.2.0",
+        "requests==2.33.0",
+        "markdown==3.10.2",
+        "weasyprint==68.0",
+        "python-docx==1.2.0",
+        "bs4==0.0.2"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": true,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "It downloads pictures from the internet.",
+        "Where the pictures folder is created relative to the output was not confirmed by a run.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

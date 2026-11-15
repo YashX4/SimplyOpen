@@ -1,0 +1,114 @@
+{
+  "name": "GeoJSON Fixer",
+  "description": "Check map files (GeoJSON) for invalid shapes and repair them.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "src/gjf/cli.py",
+          "working_directory": "src",
+          "run_command": "python -m gjf.cli {args}",
+          "description": "Validates or fixes GeoJSON files.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "files",
+        "kind": "file",
+        "label": "Map files",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".geojson",
+          ".json"
+        ],
+        "multiple": true,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "validate",
+        "kind": "boolean",
+        "label": "Only check, do not fix",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--validate",
+        "env_binding": null
+      },
+      {
+        "id": "flip",
+        "kind": "boolean",
+        "label": "Swap the coordinate order",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--flip",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Report",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "geojson",
+        "geojson-rewind",
+        "click",
+        "Shapely>=1.8a1"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "Fixed copies are saved next to each original with _fixed in the name, not in a folder you choose.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

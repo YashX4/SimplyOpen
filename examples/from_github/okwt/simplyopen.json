@@ -1,0 +1,128 @@
+{
+  "name": "Wavetable Maker",
+  "description": "Make a synthesizer wavetable from a sound file or even a picture.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "okwt/app.py",
+          "working_directory": "",
+          "run_command": "python -m okwt.app {args}",
+          "description": "Converts one file to a wavetable.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "infile",
+        "kind": "file",
+        "label": "Sound or picture",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".wav",
+          ".wt",
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".tiff"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-i {value}",
+        "env_binding": null
+      },
+      {
+        "id": "normalize",
+        "kind": "boolean",
+        "label": "Even out the loudness",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--normalize",
+        "env_binding": null
+      },
+      {
+        "id": "reverse",
+        "kind": "boolean",
+        "label": "Reverse the frame order",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--reverse",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "-o {value}/wavetable.wav",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Wavetable",
+        "path_pattern": "{output_dir}/wavetable.wav"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "numpy>=2.0.0",
+        "pillow>=10.0.0"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

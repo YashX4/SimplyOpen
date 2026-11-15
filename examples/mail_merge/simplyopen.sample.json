@@ -1,0 +1,7 @@
+{
+  "values": {
+    "template": "sample/letter.txt",
+    "people": "sample/donors.csv",
+    "output_dir": "{temp}"
+  }
+}

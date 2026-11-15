@@ -1,0 +1,67 @@
+{
+  "name": "JSON to Table",
+  "description": "Show JSON data as a readable table.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "jtbl/cli.py",
+          "working_directory": "",
+          "run_command": "jtbl {args}",
+          "description": "Prints JSON as a table.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Table",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [
+        "tabulate>=0.8.10"
+      ],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "It reads its data from standard input (piped in from another command), which the Runner cannot supply.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

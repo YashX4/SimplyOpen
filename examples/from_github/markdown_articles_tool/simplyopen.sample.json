@@ -1,0 +1,7 @@
+{
+  "values": {
+    "article": "tests/data/article.md",
+    "skip_incorrect": true,
+    "output_dir": "{temp}"
+  }
+}

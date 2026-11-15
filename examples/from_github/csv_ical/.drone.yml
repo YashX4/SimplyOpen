@@ -1,0 +1,26 @@
+kind: pipeline
+type: docker
+name: test
+
+steps:
+  - name: Test Python
+    image: python:3.15
+    commands:
+      - curl https://qlty.sh | sh
+      - pip install -e .[test]
+      - ruff check .
+      - mypy .
+      - coverage run -m unittest
+      - coverage report -m
+      - coverage lcov -o .coverage.lcov
+      - ~/.qlty/bin/qlty coverage publish .coverage.lcov --override-commit-sha "$DRONE_COMMIT_SHA" --override-branch "$DRONE_BRANCH" --override-build-id "$DRONE_BUILD_NUMBER"
+    environment:
+      QLTY_COVERAGE_TOKEN:
+        from_secret: qlty_coverage_token
+
+  - name: Test Python Packaging
+    image: python:3.15
+    commands:
+      - pip install build twine
+      - python -m build
+      - twine check --strict dist/*

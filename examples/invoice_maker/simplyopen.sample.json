@@ -1,0 +1,10 @@
+{
+  "values": {
+    "file": "sample/items.csv",
+    "customer": "Riverside Bakery",
+    "seller": "Pine Street Design",
+    "number": "2026-014",
+    "tax": "6.25",
+    "output_dir": "{temp}"
+  }
+}

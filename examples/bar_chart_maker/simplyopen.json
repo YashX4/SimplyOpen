@@ -1,0 +1,126 @@
+{
+  "name": "Bar Chart Maker",
+  "description": "Draw a bar chart picture from a two-column list of names and numbers.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "chart",
+          "path": "chart.py",
+          "working_directory": "",
+          "run_command": "python chart.py {args}",
+          "description": "Draws one bar chart.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "chart",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "Names and numbers",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "title",
+        "kind": "text",
+        "label": "Title",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--title {value}",
+        "env_binding": null
+      },
+      {
+        "id": "color",
+        "kind": "choice",
+        "label": "Bar colour",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "choices": [
+          "blue",
+          "green",
+          "grey",
+          "orange",
+          "purple"
+        ],
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--color {value}",
+        "env_binding": null,
+        "default": "blue"
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "chart",
+        "kind": "file",
+        "label": "Chart",
+        "path_pattern": "{output_dir}/chart.svg"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

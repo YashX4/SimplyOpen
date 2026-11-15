@@ -1,0 +1,110 @@
+{
+  "name": "Document Compare",
+  "description": "See what changed between two versions of a document, side by side.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "compare",
+          "path": "compare.py",
+          "working_directory": "",
+          "run_command": "python compare.py {args}",
+          "description": "Compares two text files.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "compare",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "old",
+        "kind": "file",
+        "label": "Earlier version",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".txt",
+          ".md"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--old {value}",
+        "env_binding": null
+      },
+      {
+        "id": "new",
+        "kind": "file",
+        "label": "Later version",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".txt",
+          ".md"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--new {value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "comparison",
+        "kind": "file",
+        "label": "Comparison",
+        "path_pattern": "{output_dir}/comparison.html"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

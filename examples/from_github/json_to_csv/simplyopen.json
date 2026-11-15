@@ -1,0 +1,107 @@
+{
+  "name": "JSON to Spreadsheet",
+  "description": "Flatten a nested JSON file into a spreadsheet, one row per record.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "json_to_csv.py",
+          "working_directory": "",
+          "run_command": "python json_to_csv.py {args}",
+          "description": "Converts one JSON file to CSV.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "node",
+        "kind": "text",
+        "label": "Name of the list inside the file",
+        "help": "The key that holds the records, such as 'fruit'.",
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "JSON file",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".json"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}/output.csv",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "kind": "file",
+        "label": "Spreadsheet",
+        "path_pattern": "{output_dir}/output.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": [
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "values": {
+    "file": "sample/scores.csv",
+    "pass_mark": "60",
+    "output_dir": "{temp}"
+  }
+}

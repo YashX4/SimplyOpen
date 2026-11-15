@@ -1,0 +1,89 @@
+{
+  "name": "Video to MP3",
+  "description": "Pull the sound out of a video and save it as an MP3.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "video_to_audio.py",
+          "working_directory": "",
+          "run_command": "python video_to_audio.py {args}",
+          "description": "Converts one video to MP3.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "video",
+        "kind": "file",
+        "label": "Video",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".mp4",
+          ".mov",
+          ".mkv",
+          ".avi"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "Progress; the MP3 is saved next to the video",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [
+        "ffmpeg",
+        "lame"
+      ],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "broad",
+      "reads_env_vars": [],
+      "runs_other_programs": true
+    },
+    "confidence": {
+      "overall": "medium",
+      "notes": [
+        "Needs ffmpeg and lame installed on the computer.",
+        "It imports the `pipes` module, which was removed in Python 3.13.",
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

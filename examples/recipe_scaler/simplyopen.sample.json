@@ -1,0 +1,7 @@
+{
+  "values": {
+    "file": "sample/pancakes.txt",
+    "times": "1.5",
+    "output_dir": "{temp}"
+  }
+}

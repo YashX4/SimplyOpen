@@ -1,0 +1,9 @@
+2026-11-02 09:00:01 INFO Server started on port 8080
+2026-11-02 09:00:14 INFO Request /home took 31ms
+2026-11-02 09:01:02 WARNING Slow request /search took 2210ms
+2026-11-02 09:01:40 ERROR Could not reach database after 3 tries
+2026-11-02 09:02:05 INFO Request /home took 28ms
+2026-11-02 09:03:11 WARN Slow request /search took 1875ms
+2026-11-02 09:03:59 ERROR Could not reach database after 5 tries
+2026-11-02 09:04:20 ERROR Disk almost full
+2026-11-02 09:05:00 DEBUG Cache cleared

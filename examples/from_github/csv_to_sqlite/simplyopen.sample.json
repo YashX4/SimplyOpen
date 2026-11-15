@@ -1,0 +1,8 @@
+{
+  "values": {
+    "files": [
+      "simplyopen_sample/cities.csv"
+    ],
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "name": "Email Address Finder",
+  "description": "Pull every email address out of a document and list each one once.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "extract",
+          "path": "extract.py",
+          "working_directory": "",
+          "run_command": "python extract.py {args}",
+          "description": "Lists the email addresses in one file.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "extract",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "file",
+        "kind": "file",
+        "label": "Document to search",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".txt",
+          ".md",
+          ".csv",
+          ".html"
+        ],
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "emails",
+        "kind": "file",
+        "label": "Email addresses",
+        "path_pattern": "{output_dir}/emails.txt"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

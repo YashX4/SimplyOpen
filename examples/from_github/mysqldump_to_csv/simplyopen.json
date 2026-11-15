@@ -1,0 +1,81 @@
+{
+  "name": "Database Dump to Spreadsheet",
+  "description": "Turn a MySQL dump file into spreadsheet rows.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "main",
+          "path": "mysqldump_to_csv.py",
+          "working_directory": "",
+          "run_command": "python mysqldump_to_csv.py {args}",
+          "description": "Prints the dump's rows as CSV.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "main",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "files",
+        "kind": "file",
+        "label": "Dump files",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".sql"
+        ],
+        "multiple": true,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "printed",
+        "kind": "console",
+        "label": "CSV rows",
+        "path_pattern": null
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": [
+        "Manifest written by reading the code; the project has not been run."
+      ]
+    }
+  }
+}

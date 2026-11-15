@@ -1,0 +1,103 @@
+{
+  "name": "Colour Palette Maker",
+  "description": "Build a matching set of lighter and darker shades from one colour.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "palette",
+          "path": "palette.py",
+          "working_directory": "",
+          "run_command": "python palette.py {args}",
+          "description": "Makes a page of shades of one colour.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "palette",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "color",
+        "kind": "text",
+        "label": "Starting colour code",
+        "help": "Six letters and digits, like #3366cc.",
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--color {value}",
+        "env_binding": null
+      },
+      {
+        "id": "steps",
+        "kind": "number",
+        "label": "How many shades",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": 2,
+        "max": 20,
+        "secret": false,
+        "cli_binding": "--steps {value}",
+        "env_binding": null,
+        "default": 7
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "palette",
+        "kind": "file",
+        "label": "Palette",
+        "path_pattern": "{output_dir}/palette.html"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

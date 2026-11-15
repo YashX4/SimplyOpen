@@ -1,0 +1,8 @@
+*.png
+*.txt
+output.*
+__pycache__
+.venv
+*.spec
+dist
+build

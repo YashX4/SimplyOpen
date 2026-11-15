@@ -1,0 +1,9 @@
+{
+  "values": {
+    "image": "simplyopen_sample/picture.png",
+    "width": "96",
+    "height": "64",
+    "svd_r": "20",
+    "output_dir": "{temp}"
+  }
+}

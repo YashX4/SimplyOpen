@@ -1,0 +1,105 @@
+{
+  "name": "Spreadsheet Joiner",
+  "description": "Join several spreadsheet files into one, even when their columns differ.",
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "python",
+      "language_version": null,
+      "entry_points": [
+        {
+          "id": "merge",
+          "path": "merge.py",
+          "working_directory": "",
+          "run_command": "python merge.py {args}",
+          "description": "Joins several spreadsheet files into one.",
+          "interface": {
+            "kind": "command_line",
+            "exits_on_its_own": true,
+            "controls": [],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "merge",
+      "build_command": null,
+      "assets": []
+    },
+    "inputs": [
+      {
+        "id": "files",
+        "kind": "file",
+        "label": "Spreadsheets to join",
+        "help": null,
+        "required": true,
+        "accepts": [
+          ".csv"
+        ],
+        "multiple": true,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "{value}",
+        "env_binding": null
+      },
+      {
+        "id": "add_source",
+        "kind": "boolean",
+        "label": "Add a column saying which file each row came from",
+        "help": null,
+        "required": false,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--add-source",
+        "env_binding": null
+      },
+      {
+        "id": "output_dir",
+        "kind": "folder",
+        "label": "Folder to save the result in",
+        "help": null,
+        "required": true,
+        "multiple": false,
+        "min": null,
+        "max": null,
+        "secret": false,
+        "cli_binding": "--output-dir {value}",
+        "env_binding": null
+      }
+    ],
+    "outputs": [
+      {
+        "id": "merged",
+        "kind": "file",
+        "label": "Joined spreadsheet",
+        "path_pattern": "{output_dir}/merged.csv"
+      }
+    ],
+    "dependencies": {
+      "runtime": [
+        "python>=3.9"
+      ],
+      "packages": [],
+      "system": [],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "declared_inputs_outputs_only",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "high",
+      "notes": []
+    }
+  }
+}

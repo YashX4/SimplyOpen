@@ -1,0 +1,7 @@
+Dear {name},
+
+Thank you for your gift of ${amount} to the {fund}. Because of you,
+the library can stay open on Sundays this winter.
+
+With thanks,
+The Friends of Elm Street Library

@@ -1,0 +1,9 @@
+{
+  "values": {
+    "file": "sample/newsletter.txt",
+    "find": "Spring Fair",
+    "replace": "Autumn Market",
+    "ignore_case": true,
+    "output_dir": "{temp}"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "values": {
+    "file": "examples/test_data/test_file.gpx",
+    "output_dir": "{temp}"
+  }
+}
