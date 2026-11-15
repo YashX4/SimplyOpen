@@ -33,7 +33,9 @@ Small projects that have no screen of their own: each one is a single Python scr
 | [`subtitle_shifter`](subtitle_shifter) | Subtitle Shifter | Move every subtitle earlier or later when the words do not line up with the video. |
 | [`survey_tally`](survey_tally) | Survey Tally | Count the answers to each question in a survey and see them as simple bars. |
 | [`text_compare`](text_compare) | Document Compare | See what changed between two versions of a document, side by side. |
+| [`tip_calculator`](tip_calculator) | Tip Calculator | A web page, the kind Claude makes as an HTML artifact. Shown in the app's window as it is. |
 | [`timesheet_totals`](timesheet_totals) | Timesheet Totals | Add up the hours each person worked from start and finish times, with pay if you like. |
+| [`todo_list`](todo_list) | Simple To-Do List | A React component, the kind Claude makes as a React artifact. The Factory builds it into a page first. |
 | [`word_counter`](word_counter) | Word Counter | Count how often each word appears in a piece of writing. |
 
 [`from_github`](from_github) holds thirty more projects copied from public GitHub repositories, with their own README; unlike the ones above they have not been run and most need packages installed.
@@ -47,7 +49,7 @@ Small projects that have no screen of their own: each one is a single Python scr
 - `simplyopen.json`: the name, description and manifest (format 1.0) the Runner reads
 - `simplyopen.sample.json`: answers that are known to work, for a test run
 
-Every project except `image_resizer` uses only what comes with Python 3.9 or newer, so nothing has to be installed. Each one saves its result into the folder given by `--output-dir` and never changes its input.
+Every Python project except `image_resizer` uses only what comes with Python 3.9 or newer, so nothing has to be installed. Each one saves its result into the folder given by `--output-dir` and never changes its input.
 
 ## Loading them on the website
 

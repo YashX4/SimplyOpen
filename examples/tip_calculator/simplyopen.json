@@ -1,0 +1,72 @@
+{
+  "manifest": {
+    "schema_version": "1.0",
+    "project_kind": "app_or_tool",
+    "project": {
+      "language": "html",
+      "language_version": null,
+      "build_command": null,
+      "assets": [],
+      "entry_points": [
+        {
+          "id": "tip_calculator",
+          "path": "index.html",
+          "working_directory": "",
+          "run_command": null,
+          "description": "Opens a tip calculator page that works out the tip and total from a bill amount and tip percentage",
+          "interface": {
+            "kind": "own_window",
+            "exits_on_its_own": false,
+            "controls": [
+              {
+                "action": "Enter bill amount",
+                "keys": [
+                  "Type in the Bill box"
+                ]
+              },
+              {
+                "action": "Enter tip percentage",
+                "keys": [
+                  "Type in the Tip % box"
+                ]
+              }
+            ],
+            "prompts": [],
+            "server": null
+          }
+        }
+      ],
+      "primary_entry_point": "tip_calculator"
+    },
+    "inputs": [],
+    "outputs": [],
+    "dependencies": {
+      "runtime": [],
+      "packages": [],
+      "system": [
+        "web browser"
+      ],
+      "operating_systems": [
+        "macos",
+        "windows",
+        "linux"
+      ]
+    },
+    "capabilities": {
+      "network_access": false,
+      "filesystem_access": "none",
+      "reads_env_vars": [],
+      "runs_other_programs": false
+    },
+    "confidence": {
+      "overall": "low",
+      "notes": [
+        "This is a single web page (HTML with a small script), not a script or program, so it falls outside the supported app-or-tool kind.",
+        "There is no command to run it; it is meant to be opened directly in a web browser.",
+        "The bill and tip values are typed into the page itself, so they are not listed as inputs."
+      ]
+    }
+  },
+  "name": "Tip Calculator",
+  "description": "Type in your bill amount and the tip percentage, and it instantly shows the tip and the total to pay."
+}

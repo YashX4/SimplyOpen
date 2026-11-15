@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Tip Calculator</title>
+<style>body{font-family:sans-serif;max-width:420px;margin:40px auto}input{font-size:18px;width:100%;margin:8px 0}</style></head>
+<body><h1>Tip Calculator</h1>
+<label>Bill <input id="bill" type="number" value="40"></label>
+<label>Tip % <input id="pct" type="number" value="18"></label>
+<p id="out"></p>
+<script>
+const f=()=>{const b=+bill.value,p=+pct.value;out.textContent=`Tip: $${(b*p/100).toFixed(2)}  Total: $${(b*(1+p/100)).toFixed(2)}`};
+bill.oninput=pct.oninput=f;f();
+</script></body></html>

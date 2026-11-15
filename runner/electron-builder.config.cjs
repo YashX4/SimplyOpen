@@ -1,7 +1,7 @@
 // Settings for packaging the Runner and one staged project into an app.
 // Run `npm run stage` first: it fills resources/python and resources/project.
 
-const { readFileSync } = require('node:fs')
+const { existsSync, readFileSync } = require('node:fs')
 const { join } = require('node:path')
 
 // The app is named after the project it contains.
@@ -24,8 +24,11 @@ module.exports = {
   files: ['out/**', 'package.json'],
 
   // Copied next to the Runner's code, where main/index.ts looks for them.
+  // A project that is a web page has no Python, so there is none to copy.
   extraResources: [
-    { from: 'resources/python', to: 'python' },
+    ...(existsSync(join(__dirname, 'resources/python'))
+      ? [{ from: 'resources/python', to: 'python' }]
+      : []),
     { from: 'resources/project', to: 'project' },
   ],
 

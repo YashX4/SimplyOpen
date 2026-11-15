@@ -41,19 +41,55 @@ export function zipPasted(files: PastedFile[], zipName: string): File {
   return new File([zipSync(entries, { level: 6 }) as BlobPart], zipName, { type: 'application/zip' })
 }
 
+export type ArtifactKind = 'page' | 'component' | 'python'
+
 /**
- * True when pasted code is a web page or a React component, which is what
- * most Claude artifacts are. Those cannot be made into an app yet, so it is
- * better to say so now than after a ten minute build.
+ * What kind of Claude artifact this code is, worked out from how it starts
+ * and what it imports. Each kind is saved under the file name the rest of
+ * SimplyOpen recognises it by:
+ *
+ * - a web page (HTML) becomes index.html and is shown as it is;
+ * - a React component becomes App.jsx and is built into a page first;
+ * - anything else is taken to be Python and becomes main.py.
  */
-export function looksLikeWebPage(code: string): boolean {
+export function artifactKind(code: string): ArtifactKind {
   const text = code.trim()
-  return (
-    /^<(!doctype|html|head|body|div|svg|style|script)\b/i.test(text) ||
+  if (/^<(!doctype|html|head|body|div|main|section|svg|style|script)\b/i.test(text)) return 'page'
+  if (
     /from\s+['"]react['"]/.test(text) ||
-    /^\s*export\s+default\s+function\b/m.test(text) ||
-    /^\s*(const|let|var)\s+\w+\s*=\s*\(.*\)\s*=>/m.test(text)
-  )
+    /^\s*export\s+default\b/m.test(text) ||
+    /^\s*import\s.*\sfrom\s+['"]lucide-react['"]/m.test(text)
+  ) {
+    return 'component'
+  }
+  return 'python'
+}
+
+export const ARTIFACT_FILE: Record<ArtifactKind, string> = {
+  page: 'index.html',
+  component: 'App.jsx',
+  python: 'main.py',
+}
+
+/** In words, for the line under the box that says what was recognised. */
+export const ARTIFACT_WORDS: Record<ArtifactKind, string> = {
+  page: 'a web page',
+  component: 'a React component',
+  python: 'a Python script',
+}
+
+/**
+ * Why this component cannot be built, in words for the person, or null. The
+ * Factory checks the same things; saying so here saves a ten minute wait.
+ */
+export function componentProblem(code: string): string | null {
+  if (/from\s+['"]@\//.test(code)) {
+    return "This component uses Claude's built-in interface pieces (the lines that import from \"@/components/...\"), which only exist inside Claude. Ask Claude to rewrite it using plain HTML elements and Tailwind, then paste it again."
+  }
+  if (!/\bexport\s+default\b/.test(code)) {
+    return 'This component has no "export default" line, so there is no way to tell which part to show.'
+  }
+  return null
 }
 
 /** Forward slashes, no spaces around it. */

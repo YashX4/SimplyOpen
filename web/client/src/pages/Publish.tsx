@@ -4,7 +4,7 @@ import { api, ApiError, readableSize } from '../api'
 import { Main, Page, Trouble } from '../components/bits'
 import { Box, CenterHero, Column, Mark, SignedIn, Steps, type MarkKind } from '../components/kit'
 import type { OrbSpec } from '../fx'
-import { looksLikeWebPage, pastedProblem, zipPasted, type PastedFile } from '../pasted'
+import { ARTIFACT_FILE, ARTIFACT_WORDS, artifactKind, componentProblem, pastedProblem, zipPasted, type PastedFile } from '../pasted'
 import { s } from '../s'
 
 const P1: OrbSpec[] = [[0.98, 0.9, 0.082, 'clay'], [0.02, 1.06, 0.12, 'teal']]
@@ -110,11 +110,10 @@ function PublishFlow() {
       return zipPasted(pasted, 'pasted-files.zip')
     }
     if (!artifact.trim()) { setWarn('Paste the code from your artifact first.'); return null }
-    if (looksLikeWebPage(artifact)) {
-      setWarn('This looks like a web page or a React component. Those cannot be made into an app yet. Artifacts written in Python can.')
-      return null
-    }
-    return zipPasted([{ name: 'main.py', text: artifact }], 'claude-artifact.zip')
+    const kind = artifactKind(artifact)
+    const problem = kind === 'component' ? componentProblem(artifact) : null
+    if (problem) { setWarn(problem); return null }
+    return zipPasted([{ name: ARTIFACT_FILE[kind], text: artifact }], 'claude-artifact.zip')
   }
 
   const start = () => {
@@ -236,7 +235,9 @@ function PublishFlow() {
                   placeholder="In Claude, open the artifact, choose Copy, and paste it here."
                   value={artifact} onChange={(e) => { setArtifact(e.target.value); setWarn(null) }} />
                 <p className="small" style={{ margin: 0 }}>
-                  Artifacts written in Python work today. Web pages and React components are not supported yet.
+                  {artifact.trim()
+                    ? `This looks like ${ARTIFACT_WORDS[artifactKind(artifact)]}.`
+                    : 'Web pages, React components and Python scripts all work.'}
                 </p>
               </div>
             ) : null}
