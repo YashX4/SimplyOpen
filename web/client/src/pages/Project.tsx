@@ -191,6 +191,21 @@ export function Project() {
     return () => { live = false; window.clearInterval(timer) }
   }, [versionId, pending])
 
+  // A build that finished before pictures were collected still has one waiting
+  // on GitHub. Ask once, per version, per visit, then show it if it came.
+  const hasPicture = Boolean(page?.version.picture_url)
+  useEffect(() => {
+    if (!versionId || pending || hasPicture) return
+    const key = `picture-asked:${versionId}`
+    try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1') } catch { /* fine */ }
+    let live = true
+    api.refresh(versionId)
+      .then(() => api.project(slug))
+      .then((fresh) => { if (live && fresh.version.picture_url) setPage(fresh) })
+      .catch(() => undefined)
+    return () => { live = false }
+  }, [versionId, pending, hasPicture, slug])
+
   // A new version is built after it is made. Until it is, offer the newest one
   // that is ready rather than nothing, and say so.
   useEffect(() => {
