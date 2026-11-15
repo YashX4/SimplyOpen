@@ -17,6 +17,9 @@ import {
   ChatBusyError,
   ChatModelError,
   ChatSession,
+  earlierToMessages,
+  MAX_EARLIER_CHARS,
+  MAX_EARLIER_MESSAGES,
   HttpProjectChecker,
   ProjectFolder,
   type ChatReply,
@@ -772,87 +775,78 @@ describe("HTTP service", () => {
   });
 });
 
-describe("version history (HISTORY_URL)", () => {
-  /** A stand-in for the History service that records every call. */
-  async function fakeHistory(options: { failCreate?: boolean } = {}) {
-    const calls: { url: string; request?: string; files: string[] }[] = [];
-    const app = Fastify();
-    await app.register(multipartPlugin);
-    app.post("/api/projects", async (request, reply) => {
-      const call = await readCall(request.url, request.parts());
-      calls.push(call);
-      if (options.failCreate) return reply.code(500).send({ error: { message: "down" } });
-      return reply.code(201).send({ id: "proj-1", version: { number: 1 } });
-    });
-    app.post("/api/projects/:id/versions", async (request, reply) => {
-      calls.push(await readCall(request.url, request.parts()));
-      return reply.code(201).send({ number: calls.length, description: "A plain sentence.", date: "11/14/26 3:42 PM" });
-    });
-    return { url: await app.listen({ port: 0, host: "127.0.0.1" }), calls, close: () => app.close() };
-  }
+describe("picking up an earlier conversation", () => {
+  const earlier = [
+    { role: "user" as const, text: "Make the pictures smaller" },
+    { role: "assistant" as const, text: "Pictures now come out 640 pixels wide." },
+  ];
 
-  async function readCall(url: string, parts: AsyncIterableIterator<{ type: string; fieldname: string; value?: unknown; toBuffer?: () => Promise<Buffer> }>) {
-    const call: { url: string; request?: string; files: string[] } = { url, files: [] };
-    for await (const part of parts) {
-      if (part.type === "file") call.files = Object.keys(unzipSync(new Uint8Array(await part.toBuffer!()))).sort();
-      else if (part.fieldname === "request") call.request = String(part.value);
-    }
-    return call;
-  }
-
-  function upload(zip: Uint8Array): { payload: Buffer; headers: Record<string, string> } {
-    const boundary = "----history";
-    const payload = Buffer.concat([
-      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="p.zip"\r\nContent-Type: application/zip\r\n\r\n`),
-      Buffer.from(zip),
-      Buffer.from(`\r\n--${boundary}--\r\n`),
+  it("Claude starts already knowing what was said, and is told to look at the files again", async () => {
+    const model = new ScriptedModel([answer("They are 640 wide, as you asked earlier.")]);
+    const chat = new ChatSession(await ProjectFolder.open(await makeProject()), { model, earlier });
+    await chat.send("How wide are they now?");
+    expect(model.requests[0]!.messages).toEqual([
+      { role: "user", content: "Make the pictures smaller" },
+      { role: "assistant", content: "Pictures now come out 640 pixels wide." },
+      { role: "user", content: expect.stringMatching(/^\(We are carrying on from an earlier session\..*look at them again.*\)\n\nHow wide are they now\?$/s) },
     ]);
-    return { payload, headers: { "content-type": `multipart/form-data; boundary=${boundary}` } };
-  }
-  const projectZip = () => zipSync(Object.fromEntries(Object.entries(PROJECT).map(([k, v]) => [k, new TextEncoder().encode(v)])));
-
-  it("every change the person asks for, and every undo, becomes a History version; questions and answers don't", async () => {
-    const history = await fakeHistory();
-    const model = new ScriptedModel([
-      callTool({ command: "str_replace", path: "resize.py", old_str: "WIDTH = 800", new_str: "WIDTH = 640" }),
-      answer("Pictures now come out 640 pixels wide."),
-      answer("Which colour would you like?"), // a question back: nothing changed
-      callTool({ command: "create", path: "notes.txt", file_text: "hi" }),
-      answer("Added a notes file."),
-    ]);
-    const app = await buildServer({ logger: false, session: { model }, historyUrl: history.url });
-
-    const created = (await app.inject({ method: "POST", url: "/sessions", ...upload(projectZip()) })).json() as { sessionId: string; historyProjectId: string };
-    expect(created.historyProjectId).toBe("proj-1");
-    const say = (message: string) => app.inject({ method: "POST", url: `/sessions/${created.sessionId}/messages`, payload: { message } });
-
-    expect((await say("Make them smaller")).json()).toMatchObject({ kind: "reply", history: { version: { description: "A plain sentence.", date: "11/14/26 3:42 PM" } } });
-    expect((await say("Change the colour")).json()).not.toHaveProperty("history");
-    await say("Add a notes file");
-    expect((await app.inject({ method: "POST", url: `/sessions/${created.sessionId}/undo` })).json()).toMatchObject({ history: { version: {} } });
-
-    expect(history.calls.map((c) => [c.url, c.request ?? null])).toEqual([
-      ["/api/projects", null],
-      ["/api/projects/proj-1/versions", "Make them smaller"],
-      ["/api/projects/proj-1/versions", "Add a notes file"],
-      ["/api/projects/proj-1/versions", "Undid: You asked: Add a notes file"],
-    ]);
-    // Each version holds the whole project as it was after that change.
-    expect(history.calls[2]!.files).toContain("notes.txt");
-    expect(history.calls[3]!.files).not.toContain("notes.txt");
-    await app.close();
-    await history.close();
+    // The note is only sent once.
+    model.requests.length = 0;
+    (model as unknown as { steps: unknown[] }).steps.push(answer("ok"));
+    await chat.send("Thanks");
+    expect(model.requests[0]!.messages.at(-1)).toEqual({ role: "user", content: "Thanks" });
   });
 
-  it("History being down never stops the chat", async () => {
-    const history = await fakeHistory({ failCreate: true });
-    const model = new ScriptedModel([callTool({ command: "create", path: "a.txt", file_text: "a" }), answer("Done.")]);
-    const app = await buildServer({ logger: false, session: { model }, historyUrl: history.url });
-    const created = (await app.inject({ method: "POST", url: "/sessions", ...upload(projectZip()) })).json() as { sessionId: string; historyProjectId: string | null };
-    expect(created.historyProjectId).toBeNull();
-    const reply = (await app.inject({ method: "POST", url: `/sessions/${created.sessionId}/messages`, payload: { message: "Add a file" } })).json();
-    expect(reply).toMatchObject({ kind: "reply", reply: "Done.", history: { error: expect.stringMatching(/wasn't reachable/) } });
+  it("tidies an untidy history so the turns alternate, start with the person and end with an answer", () => {
+    expect(
+      earlierToMessages([
+        { role: "assistant", text: "A stray answer" },
+        { role: "user", text: " One " },
+        { role: "user", text: "Two" },
+        { role: "assistant", text: "" },
+        { role: "assistant", text: "Answer" },
+        { role: "user", text: "A question nobody answered" },
+      ]),
+    ).toEqual([
+      { role: "user", content: "One\n\nTwo" },
+      { role: "assistant", content: "Answer" },
+    ]);
+    expect(earlierToMessages([])).toEqual([]);
+    expect(earlierToMessages([{ role: "user", text: "only a question" }])).toEqual([]);
+  });
+
+  it("keeps only the newest messages, and cuts very long ones", () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({ role: i % 2 ? ("assistant" as const) : ("user" as const), text: `m${i}` }));
+    const kept = earlierToMessages(many);
+    expect(kept).toHaveLength(MAX_EARLIER_MESSAGES);
+    expect(kept.at(-1)).toEqual({ role: "assistant", content: "m199" });
+    const long = earlierToMessages([{ role: "user", text: "x".repeat(10_000) }, { role: "assistant", text: "ok" }]);
+    expect((long[0]!.content as string).length).toBe(MAX_EARLIER_CHARS);
+  });
+
+  it("the service takes the earlier conversation when a session starts, and refuses a malformed one", async () => {
+    const model = new ScriptedModel([answer("ok")]);
+    const app = await buildServer({ logger: false, session: { model } });
+    const start = (earlierField: string) => {
+      const boundary = "----earlier";
+      const zip = zipSync({ "a.py": new TextEncoder().encode("print(1)\n") });
+      const payload = Buffer.concat([
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="earlier"\r\n\r\n${earlierField}\r\n`),
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="p.zip"\r\nContent-Type: application/zip\r\n\r\n`),
+        Buffer.from(zip),
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+      return app.inject({ method: "POST", url: "/sessions", payload, headers: { "content-type": `multipart/form-data; boundary=${boundary}` } });
+    };
+    for (const bad of ["not json", '{"role":"user"}', '[{"role":"system","text":"x"}]', '[{"role":"user","text":5}]']) {
+      expect((await start(bad)).json().error.code).toBe("BAD_EARLIER");
+    }
+    const { sessionId } = (await start(JSON.stringify(earlier))).json() as { sessionId: string };
+    await app.inject({ method: "POST", url: `/sessions/${sessionId}/messages`, payload: { message: "And now?" } });
+    expect(model.requests[0]!.messages.slice(0, 2)).toEqual([
+      { role: "user", content: "Make the pictures smaller" },
+      { role: "assistant", content: "Pictures now come out 640 pixels wide." },
+    ]);
     await app.close();
-    await history.close();
   });
 });

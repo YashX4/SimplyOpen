@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+*.log
+
+# Licensed fonts stay on your own machine. See client/public/fonts/README.md
+client/public/fonts/*.woff2

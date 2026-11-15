@@ -4,3 +4,8 @@ out/
 __pycache__/
 runner/resources/
 dist/
+
+# Secrets. Every service here reads one; none of them belong in git.
+.env
+.env.*
+!.env.example

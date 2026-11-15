@@ -1,0 +1,225 @@
+/*
+ * The design language, taken rule for rule from the design boards.
+ *
+ * FONTS: the boards use GT Canon and GT Standard from Grilli Type. Those
+ * are trial files under their own licence, so they are not in this
+ * repository. Put the four woff2 files in client/public/fonts (see the
+ * README there) and the site picks them up. Without them Fraunces and
+ * Inter stand in, which is close but not the same.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300&family=Inter:wght@300&family=IBM+Plex+Mono:wght@400&display=swap');
+
+@font-face{font-family:'GT Canon';src:url('/fonts/GT-Canon-Trial-VF.woff2') format('woff2');font-weight:300 900;font-stretch:37% 150%;font-style:normal;font-display:swap}
+@font-face{font-family:'GT Canon';src:url('/fonts/GT-Canon-Italic-Trial-VF.woff2') format('woff2');font-weight:300 900;font-stretch:37% 150%;font-style:italic;font-display:swap}
+@font-face{font-family:'GT Standard';src:url('/fonts/GT-Standard-Trial-VF.woff2') format('woff2');font-weight:300 900;font-stretch:25% 150%;font-style:normal;font-display:swap}
+@font-face{font-family:'GT Standard Mono';src:url('/fonts/GT-Standard-Mono-Trial-VF.woff2') format('woff2');font-weight:300 900;font-style:normal;font-display:swap}
+html,body,#root{height:100%}
+body{margin:0;background:#FBFAF4}
+.pg{font-family:'GT Standard','Inter',Helvetica,Arial,sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;font-variation-settings:'opsz' 16,'slnt' 0,'wdth' 100,'wght' 300;color:#091717}
+.canon{font-family:'GT Canon','Fraunces',Georgia,'Times New Roman',serif;font-weight:300;font-variation-settings:'opsz' 60,'wdth' 75,'wght' 300}
+.mono{font-family:'GT Standard Mono','IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:400;font-size:16px;letter-spacing:-0.025em;text-transform:uppercase}
+a{color:#091717}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid #2f6f6a;outline-offset:3px}
+.wrap{width:100%;box-sizing:border-box;padding-left:clamp(24px,5vw,64px);padding-right:clamp(24px,5vw,64px)}
+.col{width:100%;max-width:880px;margin:0 auto}
+.panel{position:relative;isolation:isolate;border-radius:24px;background:linear-gradient(90deg,#c7d5d8 0%,#eff0ea 9%,#ecece4 28%,#e8e8e0 50%,#e2e2d6 72%,#ccd6d0 94%,#c5d0ca 100%);
+box-shadow:0 4px 12px rgba(0,0,0,0.08),inset 0 0 0 1px rgba(255,255,255,0.5);overflow:hidden}
+.panel::after{content:"";position:absolute;left:0;top:0;right:0;bottom:0;border-radius:inherit;pointer-events:none;z-index:0;
+background:radial-gradient(300px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,0.85) 0%,rgba(255,255,255,0) 72%);
+opacity:var(--mo,0);transition:opacity .35s ease}
+.panel>*{position:relative;z-index:1}
+.nav{display:inline-flex;align-items:center;min-height:44px;font-size:16px;text-decoration:none;color:rgba(9,23,23,0.64);transition:color .2s ease}
+.nav:hover{color:#091717}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;margin-left:8px;padding:0 7px;
+box-sizing:border-box;border-radius:12px;background:#091717;color:#FBFAF4;font-size:14px;
+font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:50px;padding:0 28px;border-radius:999px;border:0;cursor:pointer;
+text-decoration:none;background:linear-gradient(180deg,#263435 0%,#0f1916 100%);color:#FBFAF4;
+font-family:inherit;font-size:18px;font-variation-settings:'opsz' 18,'slnt' 0,'wdth' 100,'wght' 300}
+.ghost{display:inline-flex;align-items:center;justify-content:center;height:50px;padding:0 24px;border-radius:999px;
+border:1px solid rgba(9,23,23,0.46);background:transparent;cursor:pointer;color:#091717;font-family:inherit;font-size:18px;
+font-variation-settings:'opsz' 18,'slnt' 0,'wdth' 100,'wght' 300;text-decoration:none}
+.ghost:hover{border-color:#091717}
+.h2{margin:0;font-size:24px;line-height:1.2;letter-spacing:-0.03em;font-variation-settings:'opsz' 24,'slnt' 0,'wdth' 100,'wght' 300}
+.h3{margin:0;font-size:20px;line-height:1.2;letter-spacing:-0.03em;font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300}
+.body{font-size:16px;line-height:1.4;color:rgba(9,23,23,0.64)}
+.small{font-size:14px;line-height:1.4;color:rgba(9,23,23,0.64);font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300}
+.mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:26px;height:26px;border-radius:50%;
+border:1px solid rgba(9,23,23,0.46);color:#FBFAF4}
+.mark svg{width:15px;height:15px}
+.mark.done{background:#2f6f6a;border-color:#2f6f6a}
+.mark.now{border-color:#091717;border-width:2px}
+.mark.now i{display:block;width:9px;height:9px;border-radius:50%;background:#091717;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.step{display:flex;align-items:center;gap:16px;padding:16px 0;border-top:1px solid rgba(9,23,23,0.16)}
+.step:first-child{border-top:0}
+.fld{display:flex;flex-direction:column;gap:8px}
+.lab{font-size:16px;color:rgba(9,23,23,0.64)}
+.inp,textarea.inp{display:block;width:100%;box-sizing:border-box;border-radius:12px;border:1px solid rgba(9,23,23,0.46);background:#fff;
+color:#091717;font-family:inherit;font-size:18px;font-variation-settings:'opsz' 18,'slnt' 0,'wdth' 100,'wght' 300}
+.inp{height:52px;padding:0 16px}
+textarea.inp{padding:14px 16px;line-height:1.4;resize:vertical;min-height:92px}
+.chip{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border-radius:22px;
+border:1px solid rgba(9,23,23,0.46);background:rgba(255,255,255,0.5);cursor:pointer;color:#091717;font-family:inherit;font-size:16px;
+font-variation-settings:'opsz' 16,'slnt' 0,'wdth' 100,'wght' 300}
+.chip.on{background:#091717;color:#FBFAF4;border-color:#091717}
+.opt{display:flex;align-items:flex-start;gap:14px;padding:16px 0;border-top:1px solid rgba(9,23,23,0.16);cursor:pointer}
+.opt:first-of-type{border-top:0}
+.opt .r{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.dot{flex:none;width:20px;height:20px;margin-top:2px;border-radius:50%;border:1px solid rgba(9,23,23,0.46)}
+.opt:has(.r:checked) .dot{border-color:#091717;border-width:2px;background:radial-gradient(circle,#091717 0 5px,rgba(0,0,0,0) 5px)}
+.row2{display:flex;align-items:baseline;gap:14px;padding:14px 0;border-top:1px solid rgba(9,23,23,0.16)}
+.row2:first-child{border-top:0}
+.grid2{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:32px;align-items:start}
+.win{display:flex;flex-direction:column;gap:18px;padding:20px;box-sizing:border-box;border-radius:16px;background:#fff;
+border:1px solid rgba(9,23,23,0.16);box-shadow:0 10px 26px rgba(9,23,23,0.1)}
+.wbar{display:flex;align-items:center;gap:8px;padding-bottom:4px}
+.wdot{display:block;width:10px;height:10px;border-radius:50%;background:rgba(9,23,23,0.22)}
+.wdrop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:128px;
+border:2px dashed rgba(9,23,23,0.46);border-radius:14px;background:rgba(9,23,23,0.02)}
+.wrun{display:flex;align-items:center;justify-content:center;height:50px;border-radius:25px;background:rgba(9,23,23,0.14);
+color:rgba(9,23,23,0.64);font-size:18px;font-variation-settings:'opsz' 18,'slnt' 0,'wdth' 100,'wght' 300}
+.wlog{min-height:74px;border-radius:14px;border:1px solid rgba(9,23,23,0.16);padding:14px;box-sizing:border-box}
+.thread{display:flex;flex-direction:column;gap:14px;height:316px;overflow:hidden;padding:2px;
+-webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0,#000 54px,#000 100%);
+mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0,#000 54px,#000 100%)}
+.msg{max-width:84%;padding:14px 18px;box-sizing:border-box;border-radius:18px;font-size:16px;line-height:1.4}
+.msg.me{align-self:flex-end;background:#091717;color:#FBFAF4;border-bottom-right-radius:6px}
+.msg.ai{align-self:flex-start;background:#fff;border:1px solid rgba(9,23,23,0.16);border-bottom-left-radius:6px}
+.acts{display:flex;gap:8px;margin-top:12px}
+.composer{display:flex;align-items:center;gap:10px}
+.composer .inp{flex:1;min-width:0}
+.send{display:inline-flex;align-items:center;justify-content:center;flex:none;width:52px;height:52px;border-radius:50%;
+border:0;cursor:pointer;background:linear-gradient(180deg,#263435 0%,#0f1916 100%);color:#FBFAF4}
+.send svg{width:20px;height:20px}
+.scrim{position:absolute;left:0;top:0;width:100%;height:100%;background:rgba(9,23,23,0.46);z-index:20}
+.sheet{position:absolute;left:50%;top:150px;transform:translateX(-50%);width:min(740px,calc(100% - 96px));z-index:21;
+display:flex;flex-direction:column;gap:20px;padding:30px}
+.sheet .thread{height:420px}
+.xbtn{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:50%;
+border:1px solid rgba(9,23,23,0.46);background:transparent;color:#091717;text-decoration:none}
+.xbtn svg{width:17px;height:17px}
+.mark.bad{background:#b4563c;border-color:#b4563c}
+.mark.na{color:rgba(9,23,23,0.64);border-color:rgba(9,23,23,0.46)}
+.prob{display:flex;align-items:flex-start;gap:16px;padding:22px 0;border-top:1px solid rgba(9,23,23,0.16)}
+.prob:first-of-type{border-top:0}
+.av{display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:50%;
+color:#FBFAF4;font-family:inherit;font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300}
+.who{display:inline-flex;align-items:center;gap:10px}
+.door{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:20px;border-top:1px solid rgba(9,23,23,0.16)}
+.sq{flex:none;width:22px;height:22px;margin-top:1px;border-radius:6px;border:1px solid rgba(9,23,23,0.46);
+display:inline-flex;align-items:center;justify-content:center;color:#FBFAF4}
+.sq svg{width:13px;height:13px;opacity:0}
+.opt:has(.r:checked) .sq{background:#2f6f6a;border-color:#2f6f6a}
+.opt:has(.r:checked) .sq svg{opacity:1}
+.new{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:12px;background:#2f6f6a;
+color:#FBFAF4;font-size:14px;font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300}
+.ba{display:flex;flex-wrap:wrap;gap:6px 24px;margin-top:10px}
+.ba span{display:flex;gap:8px;font-size:14px;line-height:1.4;color:rgba(9,23,23,0.64)}
+.ba b{font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300;font-weight:300;color:#091717}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);gap:40px;align-items:start}
+.msg.plain{align-self:stretch;max-width:100%;padding:0 2px;background:transparent;border:0;color:#091717}
+.room{display:flex;flex-direction:column;gap:18px}
+details.dis{border-top:1px solid rgba(9,23,23,0.16);padding-top:6px}
+details.dis>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;min-height:44px;
+font-size:16px;color:rgba(9,23,23,0.64)}
+details.dis>summary::-webkit-details-marker{display:none}
+details.dis>summary::after{content:"";flex:none;width:7px;height:7px;margin-left:auto;
+border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg)}
+details.dis[open]>summary::after{transform:rotate(-135deg)}
+details.dis>summary:hover{color:#091717}
+details.dis .inner{padding:4px 0 10px}
+@media (max-width:980px){.grid2{grid-template-columns:1fr}.split{grid-template-columns:1fr;gap:32px}}
+@media (prefers-reduced-motion: reduce){.panel::after{transition:none}.mark.now i{animation:none}}
+input::placeholder{color:rgba(9,23,23,0.64)}
+.card{transition:transform .4s ease,box-shadow .4s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(9,23,23,0.13),inset 0 0 0 1px rgba(255,255,255,0.6)}
+.cv{position:absolute;left:0;top:0;width:100%;height:100%;container-type:inline-size;display:flex;align-items:center;justify-content:center;transition:transform .8s ease}
+.card:hover .cv{transform:scale(1.025)}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;width:100%}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;width:100%}
+.pill{display:inline-flex;align-items:center;justify-content:center;height:46px;padding:0 22px;border-radius:23px;border:1px solid rgba(9,23,23,0.46);background:rgba(255,255,255,0.5);
+font-family:inherit;font-size:16px;font-variation-settings:'opsz' 16,'slnt' 0,'wdth' 100,'wght' 300;color:#091717;cursor:pointer;transition:background .25s ease,border-color .25s ease}
+.pill:hover{background:#fff;border-color:rgba(9,23,23,0.42)}
+.more{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:16px;font-variation-settings:'opsz' 16,'slnt' 0,'wdth' 100,'wght' 300;text-decoration:none;color:rgba(9,23,23,0.64);transition:color .2s ease}
+.more:hover{color:#091717}
+@media (max-width:1120px){.g4{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:860px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:620px){.g3,.g4{grid-template-columns:1fr}}
+
+/* Things the live site needs that a still board never did. */
+.pg button{font-family:inherit}
+.pg input[type=search]::-webkit-search-cancel-button{display:none}
+.switch{flex:none;display:flex;align-items:center;width:46px;height:26px;border-radius:13px;padding:3px;box-sizing:border-box;border:0;cursor:pointer;transition:background .2s ease}
+.switch i{display:block;width:20px;height:20px;border-radius:50%;background:#fff}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* P1: the three ways in, the drop zone and the project picker, from the publish board. */
+.g3c{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.ch{position:relative;display:flex;flex-direction:column;gap:6px;padding:22px;cursor:pointer;transition:box-shadow .3s ease,transform .3s ease}
+.ch:hover{transform:translateY(-2px)}
+.ch .r{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.ci{display:block;width:26px;height:26px;margin-bottom:10px;color:#2f6f6a}
+.ci svg{display:block;width:26px;height:26px}
+.ct{font-size:20px;line-height:1.2;letter-spacing:-0.03em;font-variation-settings:'opsz' 20,'slnt' 0,'wdth' 100,'wght' 300}
+.cd{font-size:16px;line-height:1.35;color:rgba(9,23,23,0.64)}
+.ch .dot{position:absolute;right:18px;top:18px;margin:0;width:20px;height:20px;border-radius:50%;border:1px solid rgba(9,23,23,0.46);z-index:1}
+.ch:has(.r:checked){box-shadow:0 4px 12px rgba(0,0,0,0.08),inset 0 0 0 2px #091717}
+.ch:has(.r:checked) .dot{border-color:#091717;border-width:1px;background:radial-gradient(circle,#091717 0 5px,rgba(0,0,0,0) 5px)}
+.ch.off{cursor:default;opacity:.55}
+.ch.off:hover{transform:none}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:220px;margin:0;padding:32px;box-sizing:border-box;border-radius:18px;border:2px dashed rgba(9,23,23,0.46);background:rgba(255,255,255,0.4);cursor:pointer;transition:background .2s ease,border-color .2s ease}
+.drop.over{background:rgba(47,111,106,0.08);border-color:#2f6f6a}
+.drop svg{display:block;width:34px;height:34px;color:rgba(9,23,23,0.64);margin-bottom:4px}
+.dt{font-size:24px;line-height:1.2;letter-spacing:-0.03em;font-variation-settings:'opsz' 24,'slnt' 0,'wdth' 100,'wght' 300}
+.dn{font-size:16px;color:rgba(9,23,23,0.64)}
+@media (max-width:860px){.g3c{grid-template-columns:1fr}}
+
+/* Buttons that are buttons rather than links still look like the board's links. */
+button.nav{background:none;border:0;padding:0;cursor:pointer;font-family:inherit}
+.btn[aria-disabled=true],.btn:disabled{background:rgba(9,23,23,0.16);color:rgba(9,23,23,0.64);cursor:default}
+.inp:focus,textarea.inp:focus{outline:2px solid #2f6f6a;outline-offset:1px}
+
+/* W8: the board drew the sheet inside a fixed size page. On the site it sits over the window. */
+.scrim.live{position:fixed;z-index:40}
+.sheet.live{position:fixed;z-index:41;top:50%;transform:translate(-50%,-50%);max-height:calc(100vh - 48px);overflow:auto}
+.bar{height:6px;border-radius:3px;background:rgba(9,23,23,0.14);overflow:hidden;margin-top:10px}
+.bar i{display:block;width:40%;height:100%;border-radius:3px;background:#2f6f6a;animation:slide 1.4s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@media (prefers-reduced-motion: reduce){.bar i{animation:none;width:100%}}
+
+/*
+ * The header over the orbs. On the boards the orbs sit behind the top
+ * corners, and dark ink on a dark orb disappears. The bar is paper at 82
+ * percent with a blur: over plain paper it cannot be seen, over an orb it
+ * reads as frosted glass, like the panels. The muted links stay above 4.5
+ * to 1 against the darkest orb behind it.
+ */
+.topbar::before{content:"";position:absolute;left:0;top:0;right:0;bottom:-28px;z-index:-1;pointer-events:none;
+background:rgba(251,250,244,0.82);-webkit-backdrop-filter:blur(18px) saturate(1.15);backdrop-filter:blur(18px) saturate(1.15);
+/* Faded at the foot, so an orb passing under it melts into the page rather than being cut by a line. */
+-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(180deg,#000 0%,#000 62%,rgba(0,0,0,0) 100%)}
+
+/* Increase contrast, from the computer's own settings: no glass, no orbs, full strength text. */
+@media (prefers-contrast: more){
+  .topbar::before{background:#FBFAF4;-webkit-backdrop-filter:none;backdrop-filter:none;-webkit-mask-image:none;mask-image:none;bottom:0;border-bottom:1px solid rgba(9,23,23,0.46)}
+  .pg canvas[data-orbs]{display:none !important}
+  .pg .nav,.pg .small,.pg .body,.pg .lab,.pg .cd,.pg .dn,.pg .more{color:#091717 !important}
+  /* Muted text set inline on the boards' own elements, which a class alone cannot reach. */
+  .pg [style*="rgba(9, 23, 23, 0.64)"],.pg [style*="rgba(9,23,23,0.64)"]{color:#091717 !important}
+  .panel{background:#fff;box-shadow:inset 0 0 0 1px rgba(9,23,23,0.46)}
+  .chip,.pill,.ghost,.inp,.wdrop,.drop{border-color:#091717}
+}
+
+/* On a phone the name and Sign in share the first line, the links the second. */
+.tb-break{display:none}
+@media (max-width:600px){
+  .topbar>.tb-push{display:none}
+  .topbar>.who,.topbar>.btn{order:1;margin-left:auto}
+  .topbar>.tb-break{display:block;order:2;flex-basis:100%;height:0}
+  .topbar>.nav:not(.who){order:3}
+  .topbar .brand .canon{font-size:24px!important}
+  .topbar>.btn{height:42px;padding:0 20px;font-size:16px}
+  .topbar .brand{margin-right:0!important}
+}
+@media (max-width:400px){.topbar .brand .canon{font-size:22px!important}}
