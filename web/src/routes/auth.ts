@@ -7,6 +7,7 @@ import type { FastifyInstance } from 'fastify'
 import { fail, readCookie, setCookie, SESSION_COOKIE, type AppDeps } from '../app.js'
 import * as suggestions from '../repo/suggestions.js'
 import * as users from '../repo/users.js'
+import * as accounts from '../repo/accounts.js'
 
 const MONTH_SECONDS = 30 * 24 * 60 * 60
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -40,6 +41,8 @@ export async function registerAuth(app: FastifyInstance, deps: AppDeps): Promise
       // One message for never existed, already used and expired alike.
       return fail(reply, 400, 'LINK_NOT_GOOD', 'That link has been used already, or it has expired.')
     }
+    // Opening the link proves the address is theirs. See accounts.emailProved.
+    await accounts.emailProved(deps.db, result.user.id, token, result.session)
     setCookie(reply, SESSION_COOKIE, result.session, MONTH_SECONDS)
     return reply.send({ user: { id: result.user.id, name: result.user.name, email: result.user.email } })
   })

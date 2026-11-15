@@ -12,6 +12,7 @@ import { buildApp } from './app.js'
 import { connect, connectInMemory, type Db } from './db.js'
 import { migrate } from './migrate.js'
 import { HttpAnalyzer, type Analyzer } from './services/analyzer.js'
+import { HttpChatService } from './services/chat.js'
 import { GithubFactory, type Factory } from './services/factory.js'
 import { ConsoleMailer } from './services/mailer.js'
 import { MemoryStorage, SupabaseStorage, type Storage } from './services/storage.js'
@@ -62,6 +63,8 @@ async function main(): Promise<void> {
     storage,
     factory,
     mailer: new ConsoleMailer(),
+    ...(env.CHAT_URL ? { chat: new HttpChatService(env.CHAT_URL) } : {}),
+    teamEmails: (env.TEAM_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean),
     // Where the website is, because the sign in link opens the website.
     siteUrl: env.SITE_URL ?? 'http://localhost:5173',
     logger: true,

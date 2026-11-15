@@ -65,7 +65,8 @@ export async function byNumber(db: Db, projectId: string, number: number): Promi
 }
 
 export async function byId(db: Db, id: string): Promise<Version | null> {
-  return one(await db.query<Version>('select * from versions where id = $1', [id]))
+  // Project versions only: a version of somebody's private copy is never found this way.
+  return one(await db.query<Version>('select * from versions where id = $1 and project_id is not null', [id]))
 }
 
 export async function setBuildId(db: Db, versionId: string, buildId: string): Promise<void> {

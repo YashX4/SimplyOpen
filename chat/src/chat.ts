@@ -177,6 +177,45 @@ export interface ChatSessionOptions {
   checker?: ProjectChecker;
   /** Most model steps (each a look or a change) for one message. Default 25. */
   maxStepsPerMessage?: number;
+  /**
+   * An earlier conversation about this copy to carry on from, oldest first:
+   * what the person said and what Claude answered, as plain text. Claude
+   * starts already knowing it, so the person can pick up where they left
+   * off. The code itself comes from the project folder, not from here.
+   */
+  earlier?: readonly EarlierMessage[];
+}
+
+/** One message of an earlier conversation. */
+export interface EarlierMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
+/** Most earlier messages carried into a new session (the newest are kept). */
+export const MAX_EARLIER_MESSAGES = 60;
+/** Longest earlier message kept, in characters; longer ones are cut. */
+export const MAX_EARLIER_CHARS = 4_000;
+
+/**
+ * Turn an earlier conversation into the messages a new session starts with.
+ * The API needs turns to alternate and to start with the person, so
+ * neighbouring messages from the same side are joined and a leading answer
+ * is dropped; the conversation must also end with an answer, so a trailing
+ * question without one is dropped.
+ */
+export function earlierToMessages(earlier: readonly EarlierMessage[]): Anthropic.MessageParam[] {
+  const turns: { role: "user" | "assistant"; text: string }[] = [];
+  for (const { role, text } of earlier.slice(-MAX_EARLIER_MESSAGES)) {
+    const cut = text.trim().slice(0, MAX_EARLIER_CHARS);
+    if (!cut) continue;
+    const last = turns[turns.length - 1];
+    if (last && last.role === role) last.text += `\n\n${cut}`;
+    else turns.push({ role, text: cut });
+  }
+  while (turns[0]?.role === "assistant") turns.shift();
+  while (turns[turns.length - 1]?.role === "user") turns.pop();
+  return turns.map(({ role, text }) => ({ role, content: text }));
 }
 
 /** Options for {@link ChatSession.send}. */
@@ -288,6 +327,14 @@ export class ChatSession {
     this.model = options.model ?? new AnthropicModelClient();
     this.checker = options.checker;
     this.maxSteps = options.maxStepsPerMessage ?? 25;
+    if (options.earlier?.length) {
+      this.messages.push(...earlierToMessages(options.earlier));
+      if (this.messages.length > 0) {
+        this.pendingNote =
+          "We are carrying on from an earlier session. You no longer have the files open from then, and they may have changed, so look at them again before changing anything. " +
+          "The versions made earlier are kept safely by the app. Your own version list starts again from the files as they are now, so don't mention that it looks short, and to go back further than it reaches, tell me to use the version history on the page.";
+      }
+    }
   }
 
   /** Every version so far, oldest first. The last one is the current state of the copy. */
