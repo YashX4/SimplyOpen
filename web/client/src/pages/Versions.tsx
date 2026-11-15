@@ -179,7 +179,7 @@ export function Version() {
               </Box>
             ) : null}
             <Box title="What it looks like" note={`The window people get when they open version ${number}.`}>
-              <KitWindow name={project.name} />
+              <KitWindow name={project.name} picture={version.picture_url} />
             </Box>
             <Box title="What was checked" note="Every version is checked again before anyone can get it.">
               <div style={s('display:flex;flex-direction:column;gap:0;margin-top:-6px')}>

@@ -155,3 +155,37 @@ describe('checking a download before it starts', () => {
     } finally { await h.close() }
   })
 })
+
+describe('the picture of the app window', () => {
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4])
+
+  it('is collected once the run finishes, and shows on the page and in browse', async () => {
+    const me = await h.signIn('maker@example.com', 'Maker')
+    const made = await publish(deps(), { owner: me.id, zip: SOME_ZIP })
+    await projects.setVisibility(h.db, made.project.id, 'public')
+    const real = h.factory.download.bind(h.factory)
+    h.factory.download = async (id: number) => (id === 90 ? PNG : real(id))
+
+    // Not while the run is still going.
+    h.factory.state = { found: true, finished: false, platforms: [], artifacts: [], picture: { id: 90, size: 12 } }
+    await refresh(deps(), made.version.id)
+    expect((await h.app.inject({ method: 'GET', url: `/api/projects/${made.project.slug}` })).json().version.picture_url).toBeFalsy()
+
+    h.factory.state = { ...h.factory.state, finished: true }
+    await refresh(deps(), made.version.id)
+    const page = await h.app.inject({ method: 'GET', url: `/api/projects/${made.project.slug}` })
+    expect(page.json().version.picture_url).toMatch(/window\.png$/)
+    const browse = await h.app.inject({ method: 'GET', url: '/api/browse' })
+    const mine = browse.json().projects.find((p: { slug: string }) => p.slug === made.project.slug)
+    expect(mine.picture_url).toMatch(/window\.png$/)
+  })
+
+  it('is left out, quietly, when it is not a picture', async () => {
+    const me = await h.signIn('maker@example.com', 'Maker')
+    const made = await publish(deps(), { owner: me.id, zip: SOME_ZIP })
+    h.factory.state = { found: true, finished: true, platforms: [], artifacts: [], picture: { id: 91, size: 12 } }
+    await refresh(deps(), made.version.id)
+    const page = await h.app.inject({ method: 'GET', url: `/api/projects/${made.project.slug}`, headers: { cookie: me.cookie } })
+    expect(page.json().version.picture_url).toBeFalsy()
+  })
+})

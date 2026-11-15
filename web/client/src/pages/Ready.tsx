@@ -100,7 +100,9 @@ function ReadyPage() {
           if (!live) return
           setState(r)
           setAsks((n) => n + 1)
-          if (r.outcome === 'waiting') timer = window.setTimeout(ask, EVERY)
+          // Builds say ready before their files are collected, which happens only once
+          // the whole run has finished. Keep asking until then, or nothing gets collected.
+          if (r.outcome === 'waiting' || (r.found && !r.finished)) timer = window.setTimeout(ask, EVERY)
         })
         .catch(() => { if (live) timer = window.setTimeout(ask, EVERY * 2) })
     }

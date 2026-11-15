@@ -24,7 +24,23 @@ function hash(text: string): number {
 const bar = (w: string, h: string, a: number) =>
   s(`display:block;flex:none;width:${w};height:${h};border-radius:calc(${h} / 2);background:rgba(9,23,23,${a})`)
 
-export function Cover({ slug }: { slug: string }) {
+/** The real window, floating where the drawn one would, so both kinds of card look alike. */
+function Shot({ picture, width }: { picture: string; width: string }) {
+  return (
+    <img src={picture} alt="" style={s(`display:block;width:${width};max-height:86%;object-fit:cover;object-position:top center;border-radius:2.8cqw;border:0.3cqw solid rgba(9,23,23,0.1);box-shadow:0 1.2cqw 3.4cqw rgba(9,23,23,0.12);background:#fff`)} />
+  )
+}
+
+export function Cover({ slug, picture }: { slug: string; picture?: string | null }) {
+  if (picture) {
+    return (
+      <div aria-hidden="true" style={s('position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16 / 10')}>
+        <div className="cv" style={{ background: 'linear-gradient(162deg,#f2f3f0 0%,#e4e7e4 100%)' }}>
+          <Shot picture={picture} width="74cqw" />
+        </div>
+      </div>
+    )
+  }
   const n = hash(slug)
   const tint = TINTS[n % TINTS.length] ?? '#2f6f6a'
   const icon = ICONS[(n >>> 3) % ICONS.length] ?? ''
@@ -93,8 +109,15 @@ export function tintFor(slug: string): string {
   return TINTS[hash(slug) % TINTS.length] ?? '#2f6f6a'
 }
 
-export function Thumb({ slug }: { slug: string }) {
+export function Thumb({ slug, picture }: { slug: string; picture?: string | null }) {
   const tint = TINTS[hash(slug) % TINTS.length] ?? '#2f6f6a'
+  if (picture) {
+    return (
+      <div aria-hidden="true" style={s('position:relative;flex:none;width:150px;height:96px;border-radius:12px;overflow:hidden;background:linear-gradient(162deg,#f2f3f0 0%,#e4e7e4 100%);container-type:inline-size;display:flex;align-items:center;justify-content:center')}>
+        <Shot picture={picture} width="78cqw" />
+      </div>
+    )
+  }
   return (
     <div aria-hidden="true" style={s('position:relative;flex:none;width:150px;height:96px;border-radius:12px;overflow:hidden;background:linear-gradient(162deg,#f2f3f0 0%,#e4e7e4 100%);container-type:inline-size;display:flex;align-items:center;justify-content:center')}>
       <div style={s('display:flex;flex-direction:column;gap:3.5cqw;width:74cqw;padding:4cqw;box-sizing:border-box;border-radius:4cqw;background:#fff;border:0.5cqw solid rgba(9,23,23,0.1);box-shadow:0 2cqw 5cqw rgba(9,23,23,0.1)')}>

@@ -13,6 +13,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
+import { onlyFile } from './unwrap.js'
 import type { Db } from '../db.js'
 import * as buildsRepo from '../repo/builds.js'
 import * as projectsRepo from '../repo/projects.js'
@@ -137,6 +138,11 @@ export async function publish(deps: PipelineDeps, input: PublishInput): Promise<
   }
 }
 
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+function isPng(bytes: Uint8Array): boolean {
+  return bytes.byteLength > 8 && PNG.every((b, i) => bytes[i] === b)
+}
+
 function summarise(network: boolean): string {
   return network
     ? 'This one reaches the internet. What it sends is on the project page.'
@@ -203,6 +209,21 @@ export async function refresh(deps: PipelineDeps, versionId: string): Promise<Re
       download_url: put.url,
       size_bytes: put.size,
     })
+  }
+
+  // The picture of the app's window, once, after the run. A missing or odd
+  // picture never stops the builds being collected.
+  if (state.finished && state.picture && !version.picture_url && state.picture.size < 10 * 1024 * 1024) {
+    try {
+      const got = await factory.download(state.picture.id)
+      const png = isPng(got) ? got : onlyFile(got, '.png')
+      if (png && isPng(png)) {
+        const put = await storage.put(`apps/${version.build_id}/window.png`, png, 'image/png')
+        await versionsRepo.setPicture(db, versionId, put.url)
+      }
+    } catch {
+      // Left without a picture; the page draws the window instead.
+    }
   }
 
   const builds = await buildsRepo.list(db, versionId)

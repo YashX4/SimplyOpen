@@ -78,6 +78,10 @@ export async function setSource(db: Db, versionId: string, sourceZipUrl: string,
   ])
 }
 
+export async function setPicture(db: Db, versionId: string, url: string): Promise<void> {
+  await db.query('update versions set picture_url = $2 where id = $1', [versionId, url])
+}
+
 export async function setBuildId(db: Db, versionId: string, buildId: string): Promise<void> {
   await db.query('update versions set build_id = $2 where id = $1', [versionId, buildId])
 }

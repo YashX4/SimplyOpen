@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  api, ApiError, readableDate, readableSize, systemsLine, SYSTEM_NAME, thisSystem,
+  api, ApiError, stillCollecting, readableDate, readableSize, systemsLine, SYSTEM_NAME, thisSystem,
   type Build, type Platform, type ProjectPage, type VersionRow,
 } from '../api'
 import {
@@ -179,7 +179,7 @@ export function Project() {
   // Builds only move on when somebody asks the build service. While any are
   // still going, this page asks, so leaving the progress page loses nothing.
   const versionId = page?.version.id
-  const pending = page?.builds.some((b) => b.status === 'waiting' || b.status === 'building') ?? false
+  const pending = page?.builds.some((b) => b.status === 'waiting' || b.status === 'building' || stillCollecting(b)) ?? false
   useEffect(() => {
     if (!versionId || !pending) return
     let live = true
@@ -314,7 +314,7 @@ export function Project() {
                 <h2 className="h2">What it looks like</h2>
                 <span className="small">This is the whole thing. There is nothing else to learn.</span>
               </div>
-              <KitWindow name={project.name} />
+              <KitWindow name={project.name} picture={offered.version.picture_url} />
             </div>
 
             {project.description ? (

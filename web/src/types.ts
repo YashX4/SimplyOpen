@@ -33,6 +33,8 @@ export interface Version {
   created_by: string
   suggested_by: string | null
   build_id: string | null
+  /** A picture of the app's real window, once a build has taken one. */
+  picture_url?: string | null
   created_at: string
 }
 

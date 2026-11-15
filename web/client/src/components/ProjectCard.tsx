@@ -34,7 +34,7 @@ export function ProjectCard({ project, size = 'big' }: { project: ProjectSummary
   return (
     <Link className="panel card" to={`/p/${project.slug}`}
       style={s(`display:flex;flex-direction:column;gap:${big ? 18 : 14}px;padding:${big ? 24 : 18}px;text-decoration:none;color:#091717`)}>
-      <Cover slug={project.slug} />
+      <Cover slug={project.slug} picture={project.picture_url} />
       <div style={s('display:flex;flex-direction:column;gap:7px;flex:1')}>
         <div style={s(big
           ? "font-size:24px;line-height:1.2;letter-spacing:-0.03em;font-variation-settings:'opsz' 24,'slnt' 0,'wdth' 100,'wght' 300"
@@ -56,7 +56,7 @@ export function ProjectRow({ project }: { project: ProjectSummary }) {
   return (
     <Link className="panel card" to={`/p/${project.slug}`}
       style={s('display:flex;align-items:center;gap:22px;padding:20px;text-decoration:none;color:#091717')}>
-      <Thumb slug={project.slug} />
+      <Thumb slug={project.slug} picture={project.picture_url} />
       <span style={s('display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px')}>
         <span className="h3" style={{ fontSize: 20 }}>{project.name}</span>
         <span className="body" style={{ color: 'rgba(9,23,23,0.64)' }}>{project.description}</span>

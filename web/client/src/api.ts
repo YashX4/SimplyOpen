@@ -21,6 +21,8 @@ export interface ProjectSummary {
   checked: boolean
   /** The systems the latest version has a finished build for. */
   systems: Platform[]
+  /** The newest picture of the app's real window, taken by the build. */
+  picture_url: string | null
 }
 
 export type Visibility = 'private' | 'link' | 'public'
@@ -136,6 +138,13 @@ export interface Build {
   message: string
   download_url: string | null
   size_bytes: number | null
+  /** Set when the file is still with the build service. */
+  artifact_id?: number | null
+}
+
+/** A build that says ready, but whose file has not been collected yet. */
+export function stillCollecting(b: Build): boolean {
+  return b.status === 'ready' && !b.download_url && (b.artifact_id ?? null) === null
 }
 
 export interface Check {
@@ -164,6 +173,7 @@ export interface ProjectPage {
     note: string
     created_at: string
     suggested_by: string | null
+    picture_url?: string | null
   }
   builds: Build[]
   check: Check | null

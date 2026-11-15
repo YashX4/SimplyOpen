@@ -30,6 +30,8 @@ export interface RunState {
   runId?: number
   /** Where the built zips are, once the run finished. */
   artifacts: { platform: Platform; name: string; id: number; size: number }[]
+  /** The picture of the app's window the Mac build took, if it took one. */
+  picture?: { id: number; size: number }
 }
 
 export interface Factory {
@@ -128,6 +130,7 @@ export class GithubFactory implements Factory {
 
     const finished = run.status === 'completed'
     const artifacts: RunState['artifacts'] = []
+    let picture: RunState['picture']
     if (finished) {
       const list = await this.api(`/actions/runs/${run.id}/artifacts`)
       if (list.ok) {
@@ -135,12 +138,17 @@ export class GithubFactory implements Factory {
           artifacts?: { id: number; name: string; size_in_bytes: number }[]
         }
         for (const a of data.artifacts ?? []) {
+          // Named "screenshot" by the workflow, so it is never taken for an app.
+          if (a.name === 'screenshot') {
+            picture = { id: a.id, size: a.size_in_bytes }
+            continue
+          }
           const platform = platformFromName(a.name)
           if (platform) artifacts.push({ platform, name: a.name, id: a.id, size: a.size_in_bytes })
         }
       }
     }
-    return { found: true, finished, platforms, runId: run.id, artifacts }
+    return { found: true, finished, platforms, runId: run.id, artifacts, ...(picture ? { picture } : {}) }
   }
 
   async download(artifactId: number): Promise<Uint8Array> {

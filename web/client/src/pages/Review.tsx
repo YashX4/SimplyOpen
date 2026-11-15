@@ -156,7 +156,7 @@ function ReviewPage() {
           </>}
           right={
             <Box title="How it will look" note="This is the window people get when they open it.">
-              <KitWindow name={name || page.project.name} />
+              <KitWindow name={name || page.project.name} picture={page.version.picture_url} />
             </Box>
           }
         />

@@ -15,6 +15,8 @@ export interface ProjectSummary {
   checked: boolean
   /** The systems the latest version has a finished build for. */
   systems: string[]
+  /** The newest picture of the app's real window, if any version has one. */
+  picture_url: string | null
 }
 
 /** Everything browse shows. Public only, newest change first. */
@@ -26,7 +28,10 @@ export async function listPublic(db: Db, limit = 24, offset = 0): Promise<Projec
             coalesce(c.status = 'passed', false) as checked,
             coalesce((select array_agg(b.platform::text order by b.platform) from builds b
                        where b.version_id = v.id and b.status = 'ready'), '{}') as systems,
-            (select count(*)::int from stars s where s.project_id = p.id) as stars
+            (select count(*)::int from stars s where s.project_id = p.id) as stars,
+            (select pv.picture_url from versions pv
+               where pv.project_id = p.id and pv.picture_url is not null
+               order by pv.number desc limit 1) as picture_url
      from projects p
      join users u on u.id = p.owner
      join lateral (
@@ -54,7 +59,10 @@ export async function search(db: Db, q: string, limit = 24): Promise<ProjectSumm
             coalesce(c.status = 'passed', false) as checked,
             coalesce((select array_agg(b.platform::text order by b.platform) from builds b
                        where b.version_id = v.id and b.status = 'ready'), '{}') as systems,
-            (select count(*)::int from stars s where s.project_id = p.id) as stars
+            (select count(*)::int from stars s where s.project_id = p.id) as stars,
+            (select pv.picture_url from versions pv
+               where pv.project_id = p.id and pv.picture_url is not null
+               order by pv.number desc limit 1) as picture_url
      from projects p
      join users u on u.id = p.owner
      join lateral (

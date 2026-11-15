@@ -20,13 +20,25 @@ const DEFLATED = 8
 
 export function unwrapSingleZip(bytes: Uint8Array): Uint8Array {
   try {
-    return unwrap(bytes) ?? bytes
+    return unwrap(bytes, '.zip') ?? bytes
   } catch {
     return bytes
   }
 }
 
-function unwrap(bytes: Uint8Array): Uint8Array | null {
+/**
+ * The one file inside a zip, if the zip holds exactly one and its name ends
+ * in `ending`. GitHub wraps the build's picture of the app window this way.
+ */
+export function onlyFile(bytes: Uint8Array, ending: string): Uint8Array | null {
+  try {
+    return unwrap(bytes, ending)
+  } catch {
+    return null
+  }
+}
+
+function unwrap(bytes: Uint8Array, ending: string): Uint8Array | null {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const end = findEnd(view)
   if (end < 0) return null
@@ -45,7 +57,7 @@ function unwrap(bytes: Uint8Array): Uint8Array | null {
   const name = new TextDecoder().decode(
     bytes.subarray(centralOffset + 46, centralOffset + 46 + nameLength),
   )
-  if (!name.toLowerCase().endsWith('.zip') || name.includes('/')) return null
+  if (!name.toLowerCase().endsWith(ending) || name.includes('/')) return null
   if (compressedSize === 0xffffffff || size === 0xffffffff) return null
 
   if (view.getUint32(localOffset, true) !== LOCAL_SIGNATURE) return null

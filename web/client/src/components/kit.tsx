@@ -234,8 +234,18 @@ export function Column({ children, width }: { children: ReactNode; width?: numbe
   )
 }
 
-/** The window someone gets when they open it. Drawn, not screenshotted. */
-export function KitWindow({ name }: { name: string }) {
+/**
+ * The window someone gets when they open it. A picture of the real one
+ * when the build took it, and drawn from the kit until then.
+ */
+export function KitWindow({ name, picture }: { name: string; picture?: string | null }) {
+  if (picture) {
+    return (
+      <div className="win" style={{ padding: 0, gap: 0, overflow: 'hidden' }}>
+        <img src={picture} alt={`The ${name} window, as it opens`} style={{ display: 'block', width: '100%', height: 'auto' }} />
+      </div>
+    )
+  }
   return (
     <div className="win">
       <div className="wbar" aria-hidden="true">
