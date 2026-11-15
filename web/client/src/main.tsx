@@ -4,6 +4,14 @@ import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-do
 import { Browse } from './pages/Browse'
 import { Project } from './pages/Project'
 import { SearchResults } from './pages/SearchResults'
+import { CheckEmail, SignIn, SignInDone } from './pages/SignIn'
+import { Publish } from './pages/Publish'
+import { Review } from './pages/Review'
+import { Ready } from './pages/Ready'
+import { MyThings } from './pages/MyThings'
+import { Manage } from './pages/Manage'
+import { Inbox, Suggestion, TakeIt } from './pages/Suggestions'
+import { GoBack, Version, Versions } from './pages/Versions'
 import { Plain } from './components/bits'
 import './styles.css'
 
@@ -27,16 +35,20 @@ createRoot(root).render(
         <Route path="/" element={<Browse />} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/p/:slug" element={<Project />} />
-        {/* These three are designed and not built yet. They say so rather than break. */}
-        <Route path="/publish" element={
-          <Plain current="Publish" title="Publish" line="This part of the site is still being built.">{home}</Plain>
-        } />
-        <Route path="/my-things" element={
-          <Plain current="My things" title="My things" line="This part of the site is still being built.">{home}</Plain>
-        } />
-        <Route path="/sign-in" element={
-          <Plain title="Sign in" line="Signing in is still being built. Everything on browse works without it.">{home}</Plain>
-        } />
+        <Route path="/p/:slug/versions" element={<Versions />} />
+        <Route path="/p/:slug/v/:n" element={<Version />} />
+        <Route path="/p/:slug/v/:n/back" element={<GoBack />} />
+        <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/sign-in/check" element={<CheckEmail />} />
+        <Route path="/sign-in/done" element={<SignInDone />} />
+        <Route path="/publish" element={<Publish />} />
+        <Route path="/publish/:slug" element={<Review />} />
+        <Route path="/publish/:slug/ready" element={<Ready />} />
+        <Route path="/my-things" element={<MyThings />} />
+        <Route path="/my-things/:slug" element={<Manage />} />
+        <Route path="/my-things/:slug/suggestions" element={<Inbox />} />
+        <Route path="/suggestions/:id" element={<Suggestion />} />
+        <Route path="/suggestions/:id/take" element={<TakeIt />} />
         <Route path="*" element={
           <Plain title="There is nothing here" line="The address may be wrong, or the page may have moved.">{home}</Plain>
         } />

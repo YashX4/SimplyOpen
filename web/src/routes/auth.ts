@@ -5,13 +5,14 @@
 
 import type { FastifyInstance } from 'fastify'
 import { fail, readCookie, setCookie, SESSION_COOKIE, type AppDeps } from '../app.js'
+import * as suggestions from '../repo/suggestions.js'
 import * as users from '../repo/users.js'
 
 const MONTH_SECONDS = 30 * 24 * 60 * 60
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function registerAuth(app: FastifyInstance, deps: AppDeps): Promise<void> {
-  const site = deps.siteUrl ?? 'http://localhost:3200'
+  const site = deps.siteUrl ?? 'http://localhost:5173'
 
   app.post<{ Body: { email?: string } }>('/api/auth/link', async (request, reply) => {
     const email = (request.body?.email ?? '').trim()
@@ -24,7 +25,7 @@ export async function registerAuth(app: FastifyInstance, deps: AppDeps): Promise
       subject: 'Your link to sign in',
       text:
         `Open this on the computer you want to sign in on:\n\n` +
-        `${site}/api/auth/callback?token=${token}\n\n` +
+        `${site}/sign-in/done?token=${token}\n\n` +
         `It works once, and it stops working after an hour.`,
     })
     // The same answer whether or not that address has an account, so
@@ -54,6 +55,8 @@ export async function registerAuth(app: FastifyInstance, deps: AppDeps): Promise
     if (!request.viewer) return reply.send({ user: null })
     return reply.send({
       user: { id: request.viewer.id, name: request.viewer.name, email: request.viewer.email },
+      // The badge on My things, on every screen.
+      waiting_suggestions: await suggestions.countWaitingForOwner(deps.db, request.viewer.id),
     })
   })
 }

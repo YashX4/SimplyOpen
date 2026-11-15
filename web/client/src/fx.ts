@@ -48,6 +48,7 @@ function orbShader(orbs: OrbSpec[]): string {
   const src = [
     ...PRECISION,
     'uniform vec2 uRes;',
+    'uniform float uDpr;',
     'varying vec2 vUv;',
     ...NOISE,
     'float fbm(vec2 p){ float s=0.0,a=0.5; for(int i=0;i<5;i++){ s+=a*vnoise(p); p*=2.03; a*=0.5; } return s; }',
@@ -81,7 +82,7 @@ function orbShader(orbs: OrbSpec[]): string {
     '}',
     'void main(){',
     '  vec2 frag = vUv * uRes;',
-    '  float u = min(uRes.x, 1500.0);',
+    '  float u = min(uRes.x, 1500.0 * uDpr);',
   ]
   orbs.forEach(([x, y, r, name], i) => {
     const p = PALETTE[name]
@@ -197,7 +198,7 @@ export function startFx(
   let visible = true
   const ptr = { x: -9999, y: -9999, on: false }
 
-  const orbCtx = orbCanvas && orbs.length > 0 ? program(orbCanvas, orbShader(orbs), ['uRes']) : null
+  const orbCtx = orbCanvas && orbs.length > 0 ? program(orbCanvas, orbShader(orbs), ['uRes', 'uDpr']) : null
 
   function drawOrbs() {
     if (!orbCtx || !orbCanvas) return
@@ -210,6 +211,8 @@ export function startFx(
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.uniform2f(U.uRes ?? null, w, h)
+    // The real ratio between canvas pixels and CSS pixels, after rounding.
+    gl.uniform1f(U.uDpr ?? null, w / Math.max(1, orbCanvas.offsetWidth || w))
     gl.drawArrays(gl.TRIANGLES, 0, 3)
   }
 

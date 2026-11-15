@@ -112,6 +112,31 @@ export async function registerProjects(app: FastifyInstance, deps: AppDeps): Pro
     return reply.send(state)
   })
 
+  /** P3: the name and what it does, which the analyzer wrote and the maker may change. */
+  app.patch<{ Params: { slug: string }; Body: { name?: string; description?: string } }>(
+    '/api/projects/:slug',
+    async (request, reply) => {
+      const viewer = mustBeSignedIn(request, reply)
+      if (!viewer) return reply
+      const project = await projects.bySlug(deps.db, request.params.slug)
+      if (!project || !canSee(project, viewer.id)) {
+        return fail(reply, 404, 'NO_SUCH_PROJECT', 'There is nothing here.')
+      }
+      if (!canEdit(project, viewer.id)) {
+        return fail(reply, 403, 'NOT_YOURS', 'Only the person who made it can change this.')
+      }
+      const name = (request.body?.name ?? project.name).trim()
+      const description = (request.body?.description ?? project.description).trim()
+      if (name.length === 0) return fail(reply, 400, 'NO_NAME', 'It needs a name.')
+      if (name.length > 120) return fail(reply, 400, 'NAME_TOO_LONG', 'Keep the name under 120 letters.')
+      if (description.length > 2000) {
+        return fail(reply, 400, 'DESCRIPTION_TOO_LONG', 'Keep what it does under 2000 letters.')
+      }
+      await projects.setDetails(deps.db, project.id, name, description)
+      return reply.send({ project: { ...project, name, description } })
+    },
+  )
+
   /** P3 and P7: only me, anyone with the link, everyone. */
   app.patch<{ Params: { slug: string }; Body: { visibility?: string } }>(
     '/api/projects/:slug/visibility',

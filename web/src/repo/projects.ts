@@ -106,6 +106,10 @@ export async function create(db: Db, input: NewProject): Promise<Project> {
   return row
 }
 
+export async function setDetails(db: Db, id: string, name: string, description: string): Promise<void> {
+  await db.query('update projects set name = $2, description = $3 where id = $1', [id, name, description])
+}
+
 export async function setVisibility(db: Db, id: string, visibility: Visibility): Promise<void> {
   await db.query('update projects set visibility = $2 where id = $1', [id, visibility])
 }

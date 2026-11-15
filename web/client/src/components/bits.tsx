@@ -62,27 +62,46 @@ export function Checked({ size = 14 }: { size?: 14 | 16 }) {
   )
 }
 
-let meOnce: Promise<Me | null> | null = null
-/** Who is signed in, asked once for the whole visit. */
-export function useMe(): Me | null {
-  const [me, setMe] = useState<Me | null>(null)
+/**
+ * Who is signed in, shared by every component that asks. Asked once per
+ * visit, and again whenever signing in or out changes the answer.
+ */
+export interface Session { ready: boolean; me: Me | null; waiting: number }
+let session: Session = { ready: false, me: null, waiting: 0 }
+let asking: Promise<void> | null = null
+const listeners = new Set<(s: Session) => void>()
+
+export function refreshSession(): Promise<void> {
+  asking = api.me()
+    .then((r) => { session = { ready: true, me: r.user, waiting: r.waiting_suggestions ?? 0 } })
+    .catch(() => { session = { ready: true, me: null, waiting: 0 } })
+    .then(() => { listeners.forEach((l) => l(session)) })
+  return asking
+}
+
+export function useSession(): Session {
+  const [now, setNow] = useState(session)
   useEffect(() => {
-    meOnce ??= api.me().then((r) => r.user).catch(() => null)
-    let live = true
-    void meOnce.then((user) => { if (live) setMe(user) })
-    return () => { live = false }
+    listeners.add(setNow)
+    if (!asking) void refreshSession()
+    else setNow(session)
+    return () => { listeners.delete(setNow) }
   }, [])
-  return me
+  return now
+}
+
+export function useMe(): Me | null {
+  return useSession().me
 }
 
 export type NavName = 'Browse' | 'Publish' | 'My things'
 
 export function Header({ current }: { current?: NavName }) {
-  const me = useMe()
+  const { me, waiting } = useSession()
   const ink = (name: NavName) => (name === current ? { color: '#091717' } : undefined)
   return (
     <header className="wrap" style={s('position:relative;z-index:5;display:flex;align-items:center;flex-wrap:wrap;gap:8px 28px;padding-top:24px;padding-bottom:24px')}>
-      <Link to="/" aria-label="Home" style={s('display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;color:#091717')}>
+      <Link to="/" aria-label="Home" style={s('display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;color:#091717;border-radius:50%;background:rgba(251,250,244,0.9)')}>
         <svg aria-hidden="true" width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.4">
           <circle cx="16" cy="16" r="10" />
           <circle cx="24.5" cy="9" r="2.4" fill="currentColor" stroke="none" />
@@ -90,10 +109,15 @@ export function Header({ current }: { current?: NavName }) {
       </Link>
       <Link className="nav" to="/" style={ink('Browse')}>Browse</Link>
       <Link className="nav" to="/publish" style={ink('Publish')}>Publish</Link>
-      <Link className="nav" to="/my-things" style={ink('My things')}>My things</Link>
+      <Link className="nav" to="/my-things" style={ink('My things')}>
+        My things
+        {me && waiting > 0 ? (
+          <span className="badge" aria-label={`${waiting} suggestions waiting`}>{waiting}</span>
+        ) : null}
+      </Link>
       <div style={{ flex: 1 }} />
       {me ? (
-        <Link className="nav who" to="/my-things">
+        <Link className="nav who" to="/my-things" style={s('padding:0 16px 0 7px;border-radius:999px;background:rgba(251,250,244,0.9);color:#091717')}>
           <Avatar name={me.name} size={30} />
           {me.name.split(/\s+/)[0]}
         </Link>

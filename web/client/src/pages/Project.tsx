@@ -7,6 +7,7 @@ import {
 import {
   Avatar, Bang, Checked, Hero, Main, Page, Plain, Trouble, useMe,
 } from '../components/bits'
+import { GetItSheet, KitWindow, Mark, Touches } from '../components/kit'
 import type { OrbSpec } from '../fx'
 import { s } from '../s'
 
@@ -18,72 +19,7 @@ function people(n: number): string {
   return n === 1 ? '1 person has starred it' : `${n} people have starred it`
 }
 
-/** The window someone gets when they open it. Drawn, not screenshotted. */
-function KitWindow({ name }: { name: string }) {
-  return (
-    <div className="win">
-      <div className="wbar" aria-hidden="true">
-        <i className="wdot" /><i className="wdot" style={{ opacity: 0.7 }} />
-        <i className="wdot" style={{ opacity: 0.45 }} />
-        <span style={{ width: 8 }} />
-        <span className="small" style={{ color: 'rgba(9,23,23,0.64)' }}>{name}</span>
-      </div>
-      <div className="wdrop">
-        <span className="h3">Drop files or a folder here</span>
-        <span className="small">or choose them from your computer</span>
-      </div>
-      <div style={s('display:flex;flex-direction:column;gap:7px')}>
-        <div className="wrun">Run</div>
-        <span className="small" style={{ textAlign: 'center' }}>Add your files first</span>
-      </div>
-      <div style={s('display:flex;flex-direction:column;gap:7px')}>
-        <span className="lab">Progress</span>
-        <div className="wlog"><span className="small">Progress will show here once you press Run.</span></div>
-      </div>
-      <div style={s('display:flex;flex-direction:column;gap:7px')}>
-        <div className="ghost" style={s('width:100%;box-sizing:border-box;height:46px;font-size:16px;color:rgba(9,23,23,0.64)')}>
-          Open results
-        </div>
-        <span className="small" style={{ textAlign: 'center' }}>Available after it finishes</span>
-      </div>
-    </div>
-  )
-}
-
-function Touches({ page }: { page: ProjectPage }) {
-  const { check } = page
-  if (!check) return null
-  const caps = check.manifest?.capabilities
-  const rows: [string, string][] = [
-    ['Reads', 'The files you drop in.'],
-    ['Saves', 'Its results, on your own computer.'],
-    ['Internet', check.network_access
-      ? 'Yes. It cannot do its job with the internet off.'
-      : 'Nothing. It runs on your computer only.'],
-  ]
-  if (caps) {
-    rows.push(['Anything else', caps.runs_other_programs
-      ? 'It starts other programs on your computer.'
-      : 'Nothing.'])
-  }
-  return (
-    <div className="panel" style={s('display:flex;flex-direction:column;gap:6px;padding:28px')}>
-      <h2 className="h2" style={{ marginBottom: 10 }}>What it touches</h2>
-      {rows.map(([label, text]) => (
-        <div className="row2" key={label}>
-          <span className="h3" style={{ flex: 'none', width: 112 }}>{label}</span>
-          <span className="body">{text}</span>
-        </div>
-      ))}
-      <p className="small" style={{ margin: '14px 0 0' }}>
-        This comes from reading the code before it was built. The checked label
-        above is the part we could confirm ourselves.
-      </p>
-    </div>
-  )
-}
-
-function GetIt({ page }: { page: ProjectPage }) {
+function GetIt({ page, get }: { page: ProjectPage; get: (p: Platform) => void }) {
   const { version, builds, check } = page
   const [open, setOpen] = useState(false)
   const ready = ORDER.flatMap((p) => builds.filter((b) => b.platform === p && b.status === 'ready'))
@@ -114,9 +50,9 @@ function GetIt({ page }: { page: ProjectPage }) {
 
   return (
     <div className="panel" style={s('display:flex;flex-direction:column;gap:16px;padding:28px')}>
-      <a className="btn" href={api.downloadUrl(version.id, first.platform)} style={s('width:100%;box-sizing:border-box')}>
+      <button type="button" className="btn" onClick={() => get(first.platform)} style={s('width:100%;box-sizing:border-box')}>
         Get it for {SYSTEM_NAME[first.platform]}
-      </a>
+      </button>
       <div style={s('display:flex;flex-direction:column;gap:8px')}>
         <span className="small">{facts}</span>
         {check?.status === 'passed' ? <Checked size={16} /> : null}
@@ -127,10 +63,10 @@ function GetIt({ page }: { page: ProjectPage }) {
       {others.length > 0 ? (
         <div className="door" style={{ paddingTop: 16, gap: 10 }}>
           {open ? others.map((b) => (
-            <a key={b.platform} className="ghost" href={api.downloadUrl(version.id, b.platform)}
+            <button type="button" key={b.platform} className="ghost" onClick={() => get(b.platform)}
               style={{ height: 44, fontSize: 16 }}>
               Get it for {SYSTEM_NAME[b.platform]}
-            </a>
+            </button>
           )) : (
             <button type="button" className="ghost" onClick={() => setOpen(true)} style={{ height: 44, fontSize: 16 }}>
               Also on {systemsLine(others.map((b) => b.platform))}
@@ -147,34 +83,27 @@ function GetIt({ page }: { page: ProjectPage }) {
   )
 }
 
-function Versions({ slug, current }: { slug: string; current: number }) {
+function Versions({ slug, current, get }: { slug: string; current: number; get: (id: string) => void }) {
   const [rows, setRows] = useState<VersionRow[] | null>(null)
-  const [all, setAll] = useState(false)
   useEffect(() => {
     setRows(null)
     api.versions(slug).then((r) => setRows(r.versions)).catch(() => setRows([]))
   }, [slug])
 
   if (!rows || rows.length === 0) return null
-  const shown = all ? rows : rows.slice(0, 3)
-  const here = thisSystem()
+  const shown = rows.slice(0, 3)
 
   return (
     <div className="panel" style={s('display:flex;flex-direction:column;gap:0;padding:28px')}>
       <div style={s('display:flex;align-items:baseline;gap:16px;margin-bottom:6px')}>
         <h2 className="h2">Versions</h2>
-        {rows.length > 3 && !all ? (
-          <button type="button" className="nav" onClick={() => setAll(true)}
-            style={s('margin-left:auto;background:none;border:0;padding:0;cursor:pointer')}>
-            See all
-          </button>
-        ) : null}
+        <Link className="nav" to={`/p/${slug}/versions`} style={{ marginLeft: 'auto' }}>See all</Link>
       </div>
       {shown.map((v) => v.number === current ? (
         <div className="row2" key={v.id} style={{ alignItems: 'flex-start', gap: 12 }}>
           <span style={s('display:flex;flex-direction:column;gap:4px;flex:1')}>
             <span style={s('display:flex;align-items:center;gap:10px')}>
-              <span className="h3">Version {v.number}</span>
+              <Link className="h3" to={`/p/${slug}/v/${v.number}`} style={{ textDecoration: 'none' }}>Version {v.number}</Link>
               <span className="chip on" style={s('height:28px;padding:0 12px;font-size:14px')}>Now</span>
             </span>
             <span className="body" style={{ color: '#091717' }}>{v.note || 'No note was left.'}</span>
@@ -186,13 +115,13 @@ function Versions({ slug, current }: { slug: string; current: number }) {
         </div>
       ) : (
         <div className="row2" key={v.id} style={{ alignItems: 'flex-start', gap: 16 }}>
-          <span className="h3" style={{ flex: 'none', width: 92 }}>Version {v.number}</span>
+          <Link className="h3" to={`/p/${slug}/v/${v.number}`} style={{ flex: 'none', width: 92, textDecoration: 'none' }}>Version {v.number}</Link>
           <span style={s('display:flex;flex-direction:column;gap:4px;flex:1')}>
             <span className="body" style={{ color: '#091717' }}>{v.note || (v.number === 1 ? 'First version.' : 'No note was left.')}</span>
             <span className="small">{readableDate(v.created_at)}</span>
           </span>
           {v.systems_ready > 0 ? (
-            <a className="nav" href={api.downloadUrl(v.id, here)} style={{ flex: 'none' }}>Get this one</a>
+            <button type="button" className="nav" onClick={() => get(v.id)} style={{ flex: 'none' }}>Get this one</button>
           ) : null}
         </div>
       ))}
@@ -244,6 +173,27 @@ export function Project() {
   const { slug = '' } = useParams()
   const [page, setPage] = useState<ProjectPage | null>(null)
   const [error, setError] = useState<ApiError | Error | null>(null)
+  const [sheet, setSheet] = useState<{ id: string; builds: Build[]; start: Platform; checked: boolean } | null>(null)
+  const [older, setOlder] = useState<{ page: ProjectPage; newest: number } | null>(null)
+
+  // A new version is built after it is made. Until it is, offer the newest one
+  // that is ready rather than nothing, and say so.
+  useEffect(() => {
+    setOlder(null)
+    if (!page || page.builds.some((b) => b.status === 'ready')) return
+    let live = true
+    void api.versions(slug).then(async ({ versions }) => {
+      const ready = versions.find((v) => v.number < page.version.number && v.systems_ready > 0)
+      if (!ready || !live) return
+      const d = await api.version(ready.id)
+      if (!live) return
+      setOlder({
+        newest: page.version.number,
+        page: { ...page, version: { ...page.version, ...d.version }, builds: d.builds, check: d.check ?? page.check },
+      })
+    }).catch(() => undefined)
+    return () => { live = false }
+  }, [page, slug])
 
   const load = useCallback(() => {
     setPage(null)
@@ -274,7 +224,21 @@ export function Project() {
   }
 
   const { project, owner, builds, check } = page
-  const systems = builds.filter((b) => b.status === 'ready').map((b) => b.platform)
+  const offered = older?.page ?? page
+  const systems = offered.builds.filter((b) => b.status === 'ready').map((b) => b.platform)
+  const here = thisSystem()
+  const mine = offered.builds.find((b) => b.platform === here)
+  // W5. It is here for other computers, but not for this one.
+  const notHere = systems.length > 0 && !systems.includes(here)
+
+  const getThis = (platform: Platform) =>
+    setSheet({ id: offered.version.id, builds: offered.builds, start: platform, checked: offered.check?.status === 'passed' })
+  const getVersion = (id: string) => {
+    void api.version(id).then((d) => {
+      const ready = d.builds.filter((b) => b.status === 'ready').map((b) => b.platform)
+      setSheet({ id, builds: d.builds, start: ready.includes(here) ? here : ready[0] ?? here, checked: d.check?.status === 'passed' })
+    })
+  }
 
   return (
     <Page current="Browse" orbs={ORBS}>
@@ -315,6 +279,19 @@ export function Project() {
           </div>
         ) : null}
 
+        {notHere ? (
+          <div className="panel" style={s('display:flex;align-items:flex-start;gap:16px;padding:24px 28px;margin-bottom:32px')}>
+            <Mark kind="na" />
+            <span style={s('display:flex;flex-direction:column;gap:6px;flex:1')}>
+              <span className="h3">You are on {SYSTEM_NAME[here]}, and this one is {systemsLine(systems)} only for now</span>
+              <span className="body">
+                {mine?.message || `${owner.name.split(/\s+/)[0]} would have to change it for ${SYSTEM_NAME[here]} to work.`} You
+                can still get it for another computer below.
+              </span>
+            </span>
+          </div>
+        ) : null}
+
         <div className="grid2">
           <div style={s('display:flex;flex-direction:column;gap:32px')}>
             <div className="panel" style={s('display:flex;flex-direction:column;gap:18px;padding:28px')}>
@@ -332,16 +309,25 @@ export function Project() {
               </div>
             ) : null}
 
-            <Touches page={page} />
+            <Touches check={check} foot="This comes from reading the code before it was built. The checked label above is the part we could confirm ourselves." />
           </div>
 
           <div style={s('display:flex;flex-direction:column;gap:32px;position:sticky;top:24px')}>
-            <GetIt page={page} />
-            <Versions slug={project.slug} current={page.version.number} />
+            {older ? (
+              <p className="small" style={{ margin: '0 0 -16px' }}>
+                Version {older.newest} is still being made ready. Version {older.page.version.number} works now.
+              </p>
+            ) : null}
+            <GetIt page={offered} get={getThis} />
+            <Versions slug={project.slug} current={page.version.number} get={getVersion} />
             <Doors page={page} onStars={(stars) => setPage({ ...page, stars })} />
           </div>
         </div>
       </Main>
+      {sheet ? (
+        <GetItSheet name={project.name} versionId={sheet.id} builds={sheet.builds} start={sheet.start}
+          checked={sheet.checked} onClose={() => setSheet(null)} />
+      ) : null}
     </Page>
   )
 }
