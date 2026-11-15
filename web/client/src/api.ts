@@ -237,6 +237,9 @@ export const api = {
   take: (id: string, note: string) =>
     post<{ version: { id: string; number: number; note: string } }>(`/api/suggestions/${id}/take`, { note }),
   leave: (id: string) => post<{ suggestion: SuggestionDetail['suggestion'] }>(`/api/suggestions/${id}/leave`),
+  signUp: (body: { username: string; email: string; password: string; name: string }) =>
+    post<{ user: Me }>('/api/auth/sign-up', body),
+  signIn: (login: string, password: string) => post<{ user: Me }>('/api/auth/sign-in', { login, password }),
   emailLink: (email: string) => post<{ sent: true; link?: string }>('/api/auth/link', { email }),
   name: (name: string) => send<{ user: Me }>('PATCH', '/api/me', { name }),
   finishSignIn: (token: string) =>

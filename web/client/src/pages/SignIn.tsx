@@ -18,45 +18,97 @@ function afterSignIn(): string {
   return '/my-things'
 }
 
-/** W9. One field, one button, and why you might want an account at all. */
+type Way = 'in' | 'up' | 'link'
+
+/**
+ * W9. Three ways in, one at a time: a password you already have, a new
+ * account with a password, or a link by email. All three end in the same
+ * session, and getting things never needs any of them.
+ */
 export function SignIn() {
   const { me } = useSession()
   const navigate = useNavigate()
+  const [way, setWay] = useState<Way>('in')
+  const [login, setLogin] = useState('')
+  const [username, setUsername] = useState('')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { if (me) navigate('/my-things', { replace: true }) }, [me, navigate])
 
+  const done = () => refreshSession().then(() => navigate(afterSignIn(), { replace: true }))
+  const fail = (e: Error) => { setError(e.message); setBusy(false) }
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     setBusy(true)
     setError(null)
-    api.emailLink(email.trim())
-      .then((r) => navigate(`/sign-in/check?email=${encodeURIComponent(email.trim())}`, { state: { link: r.link } }))
-      .catch((e: Error) => { setError(e.message); setBusy(false) })
+    if (way === 'in') {
+      api.signIn(login.trim(), password).then(done).catch(fail)
+    } else if (way === 'up') {
+      api.signUp({ username: username.trim(), email: email.trim(), password, name: name.trim() }).then(done).catch(fail)
+    } else {
+      api.emailLink(email.trim())
+        .then((r) => navigate(`/sign-in/check?email=${encodeURIComponent(email.trim())}`, { state: { link: r.link } }))
+        .catch(fail)
+    }
   }
+
+  const switchTo = (next: Way) => { setWay(next); setError(null) }
+  const field = (label: string, input: React.ReactNode, note?: string) => (
+    <label className="fld">
+      <span className="lab">{label}</span>
+      {input}
+      {note ? <span className="small">{note}</span> : null}
+    </label>
+  )
 
   return (
     <Page orbs={W9}>
-      <CenterHero title="Sign in" bottom={100}
+      <CenterHero title={way === 'up' ? 'Make an account' : 'Sign in'} bottom={100}
         sub="You only need an account to put something in, not to take something out." />
       <Main>
         <Column width={560}>
-          <Box title="Sign in, or make an account" note="The same link does both.">
-            <form onSubmit={submit} style={s('display:flex;flex-direction:column;gap:18px;margin-top:-4px')}>
-              <label className="fld">
-                <span className="lab">Your email address</span>
-                <input className="inp" type="email" required placeholder="you@university.edu" autoComplete="email"
-                  value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={error ? true : undefined} />
-              </label>
+          <div className="panel" style={s('display:flex;flex-direction:column;gap:18px;padding:28px')}>
+            <div style={s('display:flex;flex-wrap:wrap;gap:8px')} role="tablist" aria-label="How to sign in">
+              {([['in', 'Sign in'], ['up', 'Make an account'], ['link', 'Email me a link']] as [Way, string][]).map(([w, label]) => (
+                <button key={w} type="button" role="tab" aria-selected={way === w}
+                  className={way === w ? 'chip on' : 'chip'} onClick={() => switchTo(w)}>{label}</button>
+              ))}
+            </div>
+            <form onSubmit={submit} style={s('display:flex;flex-direction:column;gap:18px')}>
+              {way === 'in' ? <>
+                {field('Your username or email', <input className="inp" type="text" required autoComplete="username"
+                  value={login} onChange={(e) => setLogin(e.target.value)} />)}
+                {field('Your password', <input className="inp" type="password" required autoComplete="current-password"
+                  value={password} onChange={(e) => setPassword(e.target.value)} />)}
+              </> : way === 'up' ? <>
+                {field('Your name', <input className="inp" type="text" required autoComplete="name" maxLength={80}
+                  value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Raman" />, 'Shown on what you share, and on changes you suggest.')}
+                {field('A username', <input className="inp" type="text" required autoComplete="username" maxLength={30}
+                  value={username} onChange={(e) => setUsername(e.target.value)} placeholder="priya" />, 'Letters, numbers, dashes or underscores, starting with a letter.')}
+                {field('Your email address', <input className="inp" type="email" required autoComplete="email"
+                  value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@university.edu" />, 'Nobody sees it. It is how you get back in if you forget your password.')}
+                {field('A password', <input className="inp" type="password" required autoComplete="new-password"
+                  value={password} onChange={(e) => setPassword(e.target.value)} />, 'At least 8 characters, and not one you use anywhere else.')}
+              </> : <>
+                {field('Your email address', <input className="inp" type="email" required placeholder="you@university.edu" autoComplete="email"
+                  value={email} onChange={(e) => setEmail(e.target.value)} />)}
+              </>}
               {error ? <span className="small" role="alert" style={{ color: '#b4563c' }}>{error}</span> : null}
               <button className="btn" type="submit" disabled={busy} style={s('width:100%;box-sizing:border-box')}>
-                {busy ? 'Sending it' : 'Email me a link to sign in'}
+                {busy ? 'One moment' : way === 'in' ? 'Sign in' : way === 'up' ? 'Make my account' : 'Email me a link to sign in'}
               </button>
-              <span className="small">We send you a link to click. There is no password to make up, and none to forget.</span>
+              <span className="small">
+                {way === 'in' ? 'Forgotten your password? Ask for a link by email instead.'
+                  : way === 'up' ? 'You are signed in straight away. We also email you a link to confirm the address is yours.'
+                  : 'We send you a link to click. It signs you in, and makes your account if you do not have one yet.'}
+              </span>
             </form>
-          </Box>
+          </div>
           <Box title="What an account is for">
             <Rows>
               <Line left="Sharing something you made" right="Needs one" />
